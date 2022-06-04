@@ -238,6 +238,7 @@ CREATE TABLE PR_ORDER (				# don hang
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
     rec_add		INT,				# noi nhan hang
     promo_id	INT,
+    br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
     emp_id		INT		NOT NULL,
     stat		BOOL	NOT NULL,	# 0: chua thanh toan, 1: da thanh toan
@@ -256,20 +257,24 @@ CREATE TABLE PR_ORDER (				# don hang
 	CONSTRAINT 	fk_employee_order
 				FOREIGN KEY (emp_id) 
 				REFERENCES EMPLOYEE(emp_id) 
+				ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT 	fk_branch_order
+				FOREIGN KEY (br_id) 
+				REFERENCES BRANCH(br_id) 
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS RECEIPT;
 CREATE TABLE RECEIPT (
-	rec_id		INT			PRIMARY KEY,
-    order_id	INT			NOT NULL,
-    pay_day		DATE		NOT NULL,
-    pay_time	TIME		NOT NULL,
-    pay_med		CHAR(1)		NOT NULL,	# phuong thuc thanh toan: tien mat, momo, chuyen khoan
-    promo_red	INT, 		# khuyen mai quy doi
-    br_id		INT			NOT NULL,
-    cus_id		INT			NOT NULL,
-    total		INT			NOT NULL,
+	rec_id		INT		PRIMARY KEY,
+    order_id	INT		NOT NULL,
+    pay_day		DATE	NOT NULL,
+    pay_time	TIME	NOT NULL,
+    pay_med		CHAR(1)	NOT NULL,	# phuong thuc thanh toan: tien mat, momo, chuyen khoan
+    promo_red	INT, 	# khuyen mai quy doi
+    br_id		INT		NOT NULL,
+    cus_id		INT		NOT NULL,
+    total		INT		NOT NULL,
     CONSTRAINT 	fk_branch_receipt
 				FOREIGN KEY (br_id) 
 				REFERENCES BRANCH(br_id) 
@@ -302,8 +307,7 @@ CREATE TABLE DELIVERY (
 				ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT 	fk_deli_service
 				FOREIGN KEY (deli_ser_id) 
-				REFERENCES DELI_SERVICE(deli_ser_id) 
+				REFERENCES DELI_SERVICE(deli_ser_id)
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
 
