@@ -143,7 +143,8 @@ CREATE TABLE CUSTOMER (
     sex			CHAR(1)		NOT NULL,
     address		VARCHAR(100)NOT NULL,
     gmail		VARCHAR(40) NOT NULL,
-    res_date	DATE		NOT NULL
+    res_date	DATE		NOT NULL,
+    acc_point	INT			NOT NULL 	DEFAULT 0
 );
 
 DROP TABLE IF EXISTS PROMOTION;
@@ -214,7 +215,7 @@ CREATE TABLE PR_ORDER (	# don hang
     total		INT		NOT NULL	DEFAULT 0,
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
     rec_address	VARCHAR(100),		# noi nhan hang
-    promo_id	INT,
+    promo_id	INT					DEFAULT 0,
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
     emp_id		INT		NOT NULL,
@@ -243,7 +244,7 @@ CREATE TABLE RECEIPT (
     order_id	INT		NOT NULL,
     pay_day		DATE	NOT NULL,
     pay_time	TIME	NOT NULL,
-    pay_med		CHAR(1)	NOT NULL,	# phuong thuc thanh toan: tien mat, momo, chuyen khoan
+    pay_med		CHAR(1)	NOT NULL	DEFAULT 'M',	# phuong thuc thanh toan: tien mat, momo, chuyen khoan
     promo_red	INT, 	# khuyen mai quy doi
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
@@ -255,6 +256,10 @@ CREATE TABLE RECEIPT (
 	CONSTRAINT 	fk_customer_receipt
 				FOREIGN KEY (cus_id) 
 				REFERENCES CUSTOMER(cus_id) 
+				ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT 	fk_order_receipt
+				FOREIGN KEY (order_id) 
+				REFERENCES PR_ORDER(order_id) 
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -283,3 +288,144 @@ CREATE TABLE DELIVERY (
 				REFERENCES DELI_SERVICE(deli_ser_id)
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+
+DROP PROCEDURE IF EXISTS proc_insert_order;
+DELIMITER $$
+CREATE PROCEDURE proc_insert_order (
+	order_id	INT,
+    order_date	DATE,
+    order_time	TIME,
+    promo_red	INT,	# khuyen mai quy doi
+    total		INT,
+    order_type	BOOL,	# 0: offline, 1: online
+    rec_address	VARCHAR(100),		# noi nhan hang
+    promo_id	INT,
+    br_id		INT,
+    cus_id		INT,
+    emp_id		INT,
+    stat		BOOL	# 0: chua thanh toan, 1: da thanh toan
+) 
+BEGIN
+	IF (promo_red <> 0 AND promo_id <> 0) THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Only apply one type of promotion at a time!';
+    END IF;
+	INSERT INTO PR_ORDER VALUES(order_id, order_date, order_time, promo_red, total, order_type,
+								red_address, promo_id, br_id, cus_id, emp_id, stat);
+END $$
+DELIMITER ;
+
+
+# modify promotion
+DROP PROCEDURE IF EXISTS proc_modify_order_promo_id; 
+DELIMITER $$
+CREATE PROCEDURE proc_modify_order_promo_id (
+	mod_order_id 	INT,
+	new_promo_id 	INT
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Cannot find existing order!';
+	END IF;
+    UPDATE PR_ORDER 
+    SET PR_ORDER.promo_id = new_promo_id
+    WHERE PR_ORDER.order_id = mod_order_id;
+END $$
+DELIMITER ;
+
+# modify promotion redemption 
+DROP PROCEDURE IF EXISTS proc_modify_order_promo_red;
+DELIMITER $$
+CREATE PROCEDURE proc_modify_order_promo_red (
+	mod_order_id	INT,
+    redem_point		INT
+)
+BEGIN
+	SET mod_order = (SELECT * FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
+	IF mod_order = NULL THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Cannot find existing order!';
+	END IF;
+    SET total_money = mod_order.total;
+    SET limit_point = total_money * 0.7 / 1000;
+    IF limit_point < redem_point THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Redemption promotion cannot greater than 70% of order total money!';
+	END IF;
+    
+    UPDATE PR_ORDER
+    SET PR_ORDER.promo_red = redem_point
+    WHERE PR_ORDER.order_id = mod_order_id;
+END $$
+DELIMITER ;
+
+
+# calculate cus promotion: 1 point = 1,000 VND
+DROP FUNCTION IF EXISTS func_cal_cus_promo;
+DELIMITER $$
+CREATE FUNCTION func_cal_cus_promo (
+	mem_id		INT,
+    redem_point	INT
+) RETURNS INT
+BEGIN
+	DECLARE cus_point INT DEFAULT 0;
+    DECLARE promo_money INT DEFAULT 0;
+    SET cus_point = (SELECT acc_point FROM CUSTOMER WHERE mem_id = CUSTOMER.cus_id);
+    IF cus_point = NULL THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Cannot find cus!';
+            RETURN 0;
+	ELSE 
+		IF cus_point < redem_point THEN
+			SIGNAL SQLSTATE '01000'
+				SET MESSAGE_TEXT = 'Not enough point';
+				RETURN 0;
+		END IF;
+
+		SET promo_money = cus_point * 1000;
+    END IF;
+    UPDATE CUSTOMER
+    SET CUSTOMER.promo_point = CUSTOMER.promo_point - redem_point;
+    RETURN promo_money;
+END $$
+DELIMITER ;
+
+
+# trigger for creating new receipt when an ordern has been paid
+DROP TRIGGER IF EXISTS trig_create_receipt;
+DELIMITER $$
+CREATE TRIGGER trig_create_receipt AFTER UPDATE ON PR_ORDER 
+FOR EACH ROW
+BEGIN
+	IF PR_ORDER.stat = TRUE THEN
+		INSERT INTO RECEIPT VALUES(NEW.order_id, NEW.order_id, CURDATE(), CURTIME(), DEFAULT,
+									NEW.promo_red, NEW.br_id, NEW.cus_id, NEW.total);
+	END IF;
+END $$
+
+DELIMITER ;
+
+# trigger for update new total money after insert promotion redemption
+DROP TRIGGER IF EXISTS trig_update_total_money_ins;
+DELIMITER $$
+CREATE TRIGGER trig_update_total_money AFTER UPDATE ON PR_ORDER
+FOR EACH ROW
+BEGIN
+	CALL proc_update_total_money(NEW.order_id);
+END$$
+DELIMITER ;
+
+# precedure for update new total money after updatepromotion redemption
+DROP PROCEDURE IF EXISTS proc_update_total_money;
+DELIMITER $$
+CREATE PROCEDURE proc_update_total_money(
+	mod_order_id	INT
+)
+BEGIN
+	SET cus_id = (SELECT cus_id FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
+    SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
+	SET promo_money = func_cal_cus_promo(cus_id, redem_point);
+END $$
+DELIMITER ;
