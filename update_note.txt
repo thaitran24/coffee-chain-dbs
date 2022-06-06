@@ -1,0 +1,10 @@
+All tasks:
+- insert Order instance procedure - done
+- Update promo_red - done
+- Update receive address - done
+- Update status - done
+- Update cus_id - done
+- Trigger creating receipt after paying - done
+- Add/remove products to order: with gift_promo and without gift_promo
+- Update promo_id - done (need checking 2 types of promo)
+- Trigger update total money (need modify: check promo)

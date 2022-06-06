@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS BRANCH;
 CREATE TABLE BRANCH (
 	br_id		INT 			PRIMARY KEY,
     mng_id		INT				NOT NULL,
-    address		VARCHAR(100)	NOT NULL
+    address		VARCHAR(100)	NOT NULL	DEFAULT ''
 );
 
 DROP TABLE IF EXISTS FURNITURE;
@@ -29,7 +29,7 @@ CREATE TABLE EMPLOYEE (
     emp_id		INT			PRIMARY KEY,
     br_id		INT			NOT NULL,
     bdate		DATE		NOT NULL,
-    address		VARCHAR(100)NOT NULL,
+    address		VARCHAR(100)NOT NULL	DEFAULT '',
     sex			CHAR(1)		NOT NULL,
     startdate	DATE		NOT NULL,
     ssn			CHAR(10)	NOT NULL,
@@ -97,8 +97,7 @@ CREATE TABLE PR_PRICE (
 DROP TABLE IF EXISTS MATERIAL;
 CREATE TABLE MATERIAL (
 	m_id		INT			PRIMARY KEY,
-    m_name		VARCHAR(20)	NOT NULL,
-    quantity	FLOAT		NOT NULL
+    m_name		VARCHAR(20)	NOT NULL
 );
 
 DROP TABLE IF EXISTS M_BATCH;
@@ -141,7 +140,7 @@ CREATE TABLE CUSTOMER (
     cus_id		INT			PRIMARY KEY,
     phone_num	CHAR(10)	NOT NULL,
     sex			CHAR(1)		NOT NULL,
-    address		VARCHAR(100)NOT NULL,
+    address		VARCHAR(100)NOT NULL	DEFAULT '',
     gmail		VARCHAR(40) NOT NULL,
     res_date	DATE		NOT NULL,
     acc_point	INT			NOT NULL 	DEFAULT 0
@@ -214,7 +213,7 @@ CREATE TABLE PR_ORDER (	# don hang
     promo_red	INT					DEFAULT 0,	# khuyen mai quy doi
     total		INT		NOT NULL	DEFAULT 0,
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
-    rec_address	VARCHAR(100),		# noi nhan hang
+    rec_address	VARCHAR(100)		DEFAULT '',		# noi nhan hang
     promo_id	INT					DEFAULT 0,
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
@@ -263,6 +262,24 @@ CREATE TABLE RECEIPT (
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
+DROP TABLE IF EXISTS PRODUCT_ORDER;
+CREATE TABLE  PRODUCT_ORDER (
+	pr_id		INT 	NOT NULL,
+    order_id	INT		NOT NULL,
+    PRIMARY KEY (pr_id, order_id),
+    size		CHAR(1)	NOT NULL,
+    price		INT		NOT NULL,
+    quantity 	INT		NOT NULL,
+    CONSTRAINT	fk_product_order
+				FOREIGN KEY (pr_id)
+                REFERENCES PRODUCT(pr_id)
+                ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT	fk_order_product
+				FOREIGN KEY (pr_id)
+                REFERENCES PR_ORDER(order_id)
+                ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
 DROP TABLE IF EXISTS DELI_SERVICE;
 CREATE TABLE DELI_SERVICE (	#
 	deli_ser_id		INT		PRIMARY KEY,
@@ -289,7 +306,7 @@ CREATE TABLE DELIVERY (
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-
+# insert new order
 DROP PROCEDURE IF EXISTS proc_insert_order;
 DELIMITER $$
 CREATE PROCEDURE proc_insert_order (
@@ -317,6 +334,76 @@ END $$
 DELIMITER ;
 
 
+# insert product to an order
+DROP PROCEDURE IF EXISTS proc_insert_prod_order;
+DELIMITER $$
+CREATE PROCEDURE proc_insert_prod_order (
+	mod_order_id	INT,
+    prod_id			INT,
+    quantity		INT
+)
+BEGIN
+	# SOMETHING HERE
+END $$
+DELIMITER ;
+
+
+# change receive address 
+DROP PROCEDURE IF EXISTS proc_update_receive_address;
+DELIMITER $$
+CREATE PROCEDURE proc_update_receive_address (
+	mod_order_id	INT,
+    mod_address		VARCHAR(100)
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Cannot find existing order!';
+	END IF;
+    UPDATE PR_ORDER
+    SET PR_ORDER.rec_address = mod_address
+    WHERE PR_ORDER.order_id = mod_order_id; 
+END $$
+DELIMITER ;
+
+
+# update customer id in order
+DROP PROCEDURE IF EXISTS proc_update_cus_id;
+DELIMITER $$
+CREATE PROCEDURE proc_update_cus_id (
+	mod_order_id	INT,
+    mod_cus_id		INT
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Cannot find existing order!';
+	END IF;
+	UPDATE PR_ORDER
+    SET PR_ORDER.cus_id = mod_cus_id
+    WHERE PR_ORDER.order_id = mod_order_id;
+END $$
+DELIMITER ;
+
+
+# change status flag (false -> true: paid)
+DROP PROCEDURE IF EXISTS proc_set_order_status;
+DELIMITER $$
+CREATE PROCEDURE proc_set_order_status(
+	mod_order_id 	INT
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Cannot find existing order!';
+	END IF;
+    UPDATE PR_ORDER
+    SET PR_ORDER.stat = TRUE
+    WHERE PR_ORDER.order_id = mod_order_id;
+END $$
+DELIMITER ;
+
+
 # modify promotion
 DROP PROCEDURE IF EXISTS proc_modify_order_promo_id; 
 DELIMITER $$
@@ -325,15 +412,23 @@ CREATE PROCEDURE proc_modify_order_promo_id (
 	new_promo_id 	INT
 )
 BEGIN
+	DECLARE promo_red INT DEFAULT 0;
 	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
 		SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Cannot find existing order!';
 	END IF;
+    SET promo_red = (SELECT promo_red FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
+    IF promo_red <> 0 AND new_promo_id <> 0 THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Only apply one type of promotion at a time!';
+	END IF;
     UPDATE PR_ORDER 
     SET PR_ORDER.promo_id = new_promo_id
     WHERE PR_ORDER.order_id = mod_order_id;
+    # NEED TRIGGER
 END $$
 DELIMITER ;
+
 
 # modify promotion redemption 
 DROP PROCEDURE IF EXISTS proc_modify_order_promo_red;
@@ -343,11 +438,18 @@ CREATE PROCEDURE proc_modify_order_promo_red (
     redem_point		INT
 )
 BEGIN
-	SET mod_order = (SELECT * FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
-	IF mod_order = NULL THEN
+	DECLARE total_money INT DEFAULT 0;
+    DECLARE limit_point INT DEFAULT 0;
+    DECLARE promo_id 	INT	DEFAULT 0;
+	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
 		SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Cannot find existing order!';
 	END IF;
+    SET promo_id = (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
+    IF promo_id <> 0 AND redem_point <> 0 THEN
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Only apply one type of promotion at a time!';
+    END IF;
     SET total_money = mod_order.total;
     SET limit_point = total_money * 0.7 / 1000;
     IF limit_point < redem_point THEN
@@ -368,7 +470,7 @@ DELIMITER $$
 CREATE FUNCTION func_cal_cus_promo (
 	mem_id		INT,
     redem_point	INT
-) RETURNS INT
+) RETURNS INT DETERMINISTIC
 BEGIN
 	DECLARE cus_point INT DEFAULT 0;
     DECLARE promo_money INT DEFAULT 0;
@@ -404,13 +506,13 @@ BEGIN
 									NEW.promo_red, NEW.br_id, NEW.cus_id, NEW.total);
 	END IF;
 END $$
-
 DELIMITER ;
+
 
 # trigger for update new total money after insert promotion redemption
 DROP TRIGGER IF EXISTS trig_update_total_money_ins;
 DELIMITER $$
-CREATE TRIGGER trig_update_total_money AFTER UPDATE ON PR_ORDER
+CREATE TRIGGER trig_update_total_money_ins AFTER UPDATE ON PR_ORDER
 FOR EACH ROW
 BEGIN
 	CALL proc_update_total_money(NEW.order_id);
@@ -424,8 +526,14 @@ CREATE PROCEDURE proc_update_total_money(
 	mod_order_id	INT
 )
 BEGIN
+	DECLARE cus_id	INT DEFAULT 0;
+    DECLARE redem_point INT DEFAULT 0;
+    DECLARE promo_money INT DEFAULT 0;
 	SET cus_id = (SELECT cus_id FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
     SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
 	SET promo_money = func_cal_cus_promo(cus_id, redem_point);
+    UPDATE PR_ORDER
+    SET PR_ORDER.total = PR_ORDER.total - promo_money
+    WHERE PR_ORDER.order_id = mod_order_id;
 END $$
 DELIMITER ;
