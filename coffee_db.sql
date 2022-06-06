@@ -2,26 +2,11 @@ drop database if exists coffee_db;
 create database coffee_db;
 USE coffee_db;
 
-# CREATE TABLE
-DROP TABLE IF EXISTS ADDRESS;
-CREATE TABLE ADDRESS (
-	add_num		INT			PRIMARY KEY,
-    street_num	VARCHAR(10),
-    street_name	VARCHAR(20),
-    ward		VARCHAR(20),
-    district	VARCHAR(20),
-    province	VARCHAR(20)
-);
-
 DROP TABLE IF EXISTS BRANCH;
 CREATE TABLE BRANCH (
-	br_id		INT 		PRIMARY KEY,
-    mng_id		INT			NOT NULL,
-    add_num		INT			NOT NULL,
-    CONSTRAINT 	fk_branch_address
-				FOREIGN KEY (add_num) 
-				REFERENCES ADDRESS(add_num)
-                ON DELETE RESTRICT ON UPDATE CASCADE
+	br_id		INT 			PRIMARY KEY,
+    mng_id		INT				NOT NULL,
+    address		VARCHAR(100)	NOT NULL
 );
 
 DROP TABLE IF EXISTS FURNITURE;
@@ -44,7 +29,7 @@ CREATE TABLE EMPLOYEE (
     emp_id		INT			PRIMARY KEY,
     br_id		INT			NOT NULL,
     bdate		DATE		NOT NULL,
-    add_num		INT			NOT NULL,
+    address		VARCHAR(100)NOT NULL,
     sex			CHAR(1)		NOT NULL,
     startdate	DATE		NOT NULL,
     ssn			CHAR(10)	NOT NULL,
@@ -58,10 +43,6 @@ CREATE TABLE EMPLOYEE (
     CONSTRAINT 	fk_emp_branch
 				FOREIGN KEY (br_id) 
 				REFERENCES BRANCH(br_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
-	CONSTRAINT 	fk_emp_address
-				FOREIGN KEY (add_num) 
-				REFERENCES ADDRESS(add_num) 
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -160,13 +141,9 @@ CREATE TABLE CUSTOMER (
     cus_id		INT			PRIMARY KEY,
     phone_num	CHAR(10)	NOT NULL,
     sex			CHAR(1)		NOT NULL,
-    add_num		INT			NOT NULL,
+    address		VARCHAR(100)NOT NULL,
     gmail		VARCHAR(40) NOT NULL,
-    res_date	DATE		NOT NULL,
-    CONSTRAINT 	fk_cus_address
-				FOREIGN KEY (add_num) 
-				REFERENCES ADDRESS(add_num) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
+    res_date	DATE		NOT NULL
 );
 
 DROP TABLE IF EXISTS PROMOTION;
@@ -229,23 +206,19 @@ CREATE TABLE PRODUCT_GIFT (		# san pham duoc dung de tang
 );
 
 DROP TABLE IF EXISTS PR_ORDER;
-CREATE TABLE PR_ORDER (				# don hang
+CREATE TABLE PR_ORDER (	# don hang
 	order_id	INT 	PRIMARY KEY,
     order_date	DATE	NOT NULL,
     order_time	TIME	NOT NULL,
-    promo_red	INT,				# khuyen mai quy doi
-    total		INT		NOT NULL,
+    promo_red	INT					DEFAULT 0,	# khuyen mai quy doi
+    total		INT		NOT NULL	DEFAULT 0,
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
-    rec_add		INT,				# noi nhan hang
+    rec_address	VARCHAR(100),		# noi nhan hang
     promo_id	INT,
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
     emp_id		INT		NOT NULL,
     stat		BOOL	NOT NULL,	# 0: chua thanh toan, 1: da thanh toan
-    CONSTRAINT 	fk_receive_address
-				FOREIGN KEY (rec_add) 
-				REFERENCES ADDRESS(add_num) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT 	fk_promotion_order
 				FOREIGN KEY (promo_id) 
 				REFERENCES PROMOTION(promo_id) 
@@ -310,4 +283,3 @@ CREATE TABLE DELIVERY (
 				REFERENCES DELI_SERVICE(deli_ser_id)
 				ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
