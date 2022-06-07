@@ -1,0 +1,14 @@
+INSERT, UPDATE, DELETE PROCEDURE:
+    + Batch: Done
+    + Material: Need table update, remove quantity field
+    + Customer: Haven't check address
+    * Basic test: Done
+
+DISPLAY DATA PROCEDURE:
+    + Get a branch's material list: Done
+    + Get a branch's monthly income: Done
+    * Test : None
+
+FUNCTION:
+    + Check if a branch's monthly income pass a target or not : Done
+    * Test: None
