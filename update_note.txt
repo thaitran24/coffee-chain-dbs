@@ -1,10 +1,24 @@
-All tasks:
-- insert Order instance procedure - done
-- Update promo_red - done
-- Update receive address - done
-- Update status - done
-- Update cus_id - done
-- Trigger creating receipt after paying - done
-- Add/remove products to order: with gift_promo and without gift_promo
-- Update promo_id - done (need checking 2 types of promo)
-- Trigger update total money (need modify: check promo)
+1. INSERT, UPDATE, DELETE:
+- INSERT:
+	+ Insert new Order (procedure): done
+	+ Creating Receipt after paying an Order (trigger): need considering
+	+ Insert product to an Order (procedure): done
+- UPDATE:
+	+ Update promotion redemption (procedure)
+		+ Calculate redemption money (function): done
+	+ Update Order status (procdure): done
+	+ Update receive address (procedure): done
+	+ Update customer id: need considering
+	+ Update total money (trigger): done
+	+ Update + Insert product in an Order: done
+	+ Update promotion id (procedure):
+	+ Update gift products:
+	+ Update promotion points after paying an order (trigger)
+- DELETE:
+	+ Delete a Product from Order: done
+	+ Delete an Order: done
+	
+2. List top 10 selling products
+3. Promotion sales statistics
+4. Calculate revenue of a specific branch in a period of time
+5. Calculate spent money of a customer
