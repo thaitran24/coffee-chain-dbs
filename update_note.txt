@@ -1,24 +1,21 @@
-1. INSERT, UPDATE, DELETE:
-- INSERT:
-	+ Insert new Order (procedure): done
-	+ Creating Receipt after paying an Order (trigger): need considering
-	+ Insert product to an Order (procedure): done
-- UPDATE:
-	+ Update promotion redemption (procedure)
-		+ Calculate redemption money (function): done
-	+ Update Order status (procdure): done
-	+ Update receive address (procedure): done
-	+ Update customer id: need considering
-	+ Update total money (trigger): done
-	+ Update + Insert product in an Order: done
-	+ Update promotion id (procedure):
-	+ Update gift products:
-	+ Update promotion points after paying an order (trigger)
-- DELETE:
-	+ Delete a Product from Order: done
-	+ Delete an Order: done
-	
-2. List top 10 selling products
-3. Promotion sales statistics
-4. Calculate revenue of a specific branch in a period of time
-5. Calculate spent money of a customer
+1. INSERT:
+- Insert new Order: proc_insert_order
+- Create Receipt after creating an Order: trig_create_receipt
+- Insert Product to an Order (insert/update): proc_update_prod_order (normal products), proc_insert_gift_product (gift products)
+2. UPDATE:
+- Update Promotion redemption: proc_update_order_promo_red => func_cal_red_money (function): calculate redemption promotion money
+- Update Customer's accumulation points after paying an order: proc_update_cus_acc_points
+- Update Order status (unpaid -> paid): proc_set_order_status
+- Update Customer id (before paying): proc_update_cus_id
+- Update Order total money: 
+- Update Order promotion id: proc_update_order_promo_id
+- Update Order total money (trigger): trig_update_total_money
+3. DELETE
+- Delete a Product from Order: proc_delete_product_order
+- Delete an Order (also delete corresponding Receipt): proc_del_order
+4. OTHERS: 
+- View all products of an Order: proc_view_order_products
+- View all selling products order by sales (in a branch and in a period of time: start_date/end_date): proc_selling_prods
+- View all promotion's revenue: proc_promo_sales
+- View all branch's revenue (in a period of time: start_date/end_date): proc_branch_revenue
+- View money spent of all customers: proc_cus_money_spent

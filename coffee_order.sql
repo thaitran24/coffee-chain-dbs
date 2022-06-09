@@ -188,7 +188,7 @@ CREATE PROCEDURE proc_update_cus_id (
 	mod_order_id	INT,
     mod_cus_id		INT
 )
-BEGIN
+BEGIN	
     DECLARE order_status BOOL DEFAULT FALSE;
     SET order_status = (SELECT stat FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
     IF order_status = NULL THEN
@@ -491,4 +491,3 @@ BEGIN
     DELETE FROM PR_ORDER WHERE order_id = del_order_id;
 END $$
 DELIMITER ;
-

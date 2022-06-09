@@ -56,7 +56,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS proc_branch_revenue;
 DELIMITER $$
-CREATE PROCEDURE proc_branch_revenue(
+CREATE PROCEDURE proc_branch_revenue (
     start_date	DATE,
     end_date	DATE
 )
@@ -73,8 +73,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS proc_cus_money_spent;
 DELIMITER $$
-CREATE PROCEDURE proc_cus_money_spent (
-)
+CREATE PROCEDURE proc_cus_money_spent ()
 BEGIN
 	SELECT CUSTOMER.cus_id, CUSTOMER.cus_name, SUM(RECEIPT.total) AS total_spent
     FROM 	RECEIPT, CUSTOMER
@@ -83,8 +82,3 @@ BEGIN
     ORDER BY total_spent;
 END $$
 DELIMITER ;
- 
-
-
-
-
