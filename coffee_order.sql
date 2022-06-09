@@ -10,7 +10,7 @@ CREATE PROCEDURE proc_insert_order (
     promo_red	INT,	# khuyen mai quy doi
     total		INT,
     order_type	BOOL,	# 0: offline, 1: online
-    rec_address	VARCHAR(100),		# noi nhan hang
+    rec_address	VARCHAR(100),	# noi nhan hang
     promo_id	INT,
     br_id		INT,
     cus_id		INT,
@@ -56,19 +56,38 @@ DELIMITER ;
 # ??? trigger for creating new receipt when an ordern has been paid 
 DROP TRIGGER IF EXISTS trig_create_receipt;
 DELIMITER $$
-CREATE TRIGGER trig_create_receipt AFTER UPDATE ON PR_ORDER 
+CREATE TRIGGER trig_create_receipt AFTER INSERT ON PR_ORDER 
 FOR EACH ROW
 BEGIN
-	IF PR_ORDER.stat = TRUE THEN
-		INSERT INTO RECEIPT VALUES(NEW.order_id, NEW.order_id, CURDATE(), CURTIME(), DEFAULT,
-									NEW.promo_red, NEW.br_id, NEW.cus_id, NEW.total);
+	IF NEW.order_id = (SELECT rec_id FROM RECEIPT WHERE RECEIPT.order_id = NEW.order_id) THEN
+		SET @error_msg = CONCAT('Receipt ID: ', CAST(mod_order_id as CHAR), ' has already existed');
+		SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
 	END IF;
+    
+	INSERT INTO RECEIPT VALUES(NEW.order_id, NEW.order_id, CURDATE(), CURTIME(),
+								NEW.promo_red, NEW.br_id, NEW.cus_id, NEW.total);
 END $$
 DELIMITER ;
 
 
+# update receipt after update on order
+DROP TRIGGER IF EXISTS trig_update_receipt;
+DELIMITER $$
+CREATE TRIGGER trig_update_receipt AFTER UPDATE ON PR_ORDER
+FOR EACH ROW
+BEGIN
+	UPDATE RECEIPT
+    SET RECEIPT.total = NEW.total,
+		RECEIPT.promo_red = NEW.promo_red,
+        RECEIPT.pay_day = CURDATE(),
+        RECEIPT.pay_time = CURTIME()
+	WHERE RECEIPT.order_id = NEW.order_id;
+END $$
+DELIMITER ;
 
-# insert/update product to an order: if product exist, then add
+
+# insert/update product to an order: if product exist, then add new quantity
 DROP PROCEDURE IF EXISTS proc_update_prod_order;
 DELIMITER $$
 CREATE PROCEDURE proc_update_prod_order (
@@ -91,14 +110,13 @@ BEGIN
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
-    SET @prod_order = (SELECT * FROM PRODUCT_ORDER WHERE pr_id = add_prod_id AND order_id = add_order_id AND add_size = size);
-    IF @prod_order = NULL THEN
-		INSERT INTO PRODUCT_ORDER VALUES(add_order_id, add_order_id, add_size, add_price, add_quantity);
+    IF (SELECT * FROM PRODUCT_ORDER WHERE pr_id = add_prod_id AND order_id = add_order_id AND add_size = size) = NULL THEN
+		INSERT INTO PRODUCT_ORDER VALUES(add_prod_id, add_order_id, add_size, add_price, add_quantity, DEFAULT);
 	ELSE 
 		UPDATE 	PRODUCT_ORDER
         SET	   	PRODUCT_ORDER.price = add_price,
                 PRODUCT_ORDER.quantity = add_quantity
-		WHERE	PRODUCT_ORDER.pr_id = add_order_id 
+		WHERE	PRODUCT_ORDER.pr_id = add_prod_id 
 				AND PRODUCT_ORDER.order_id = add_order_id
 				AND	PRODUCT_ORDER.size = add_size;
 	END IF;
@@ -142,6 +160,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+
 # change receive address 
 DROP PROCEDURE IF EXISTS proc_update_receive_address;
 DELIMITER $$
@@ -170,15 +189,23 @@ CREATE PROCEDURE proc_update_cus_id (
     mod_cus_id		INT
 )
 BEGIN
-    IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
+    DECLARE order_status BOOL DEFAULT FALSE;
+    SET order_status = (SELECT stat FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
+    IF order_status = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(mod_order_id as CHAR));
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
+    
+    IF order_status = TRUE THEN
+		SET @error_msg = CONCAT('Order ID: ', CAST(mod_order_id as CHAR), ' had been paid. Cannot change customer ID.');
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
 	UPDATE PR_ORDER
     SET PR_ORDER.cus_id = mod_cus_id
-    WHERE PR_ORDER.order_id = mod_order_id;
-    # 
+    WHERE PR_ORDER.order_id = mod_order_id; 
 END $$
 DELIMITER ;
 
@@ -195,6 +222,7 @@ BEGIN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
+    
     UPDATE PR_ORDER
     SET PR_ORDER.stat = TRUE
     WHERE PR_ORDER.order_id = mod_order_id;
@@ -226,15 +254,14 @@ BEGIN
     UPDATE PR_ORDER 
     SET PR_ORDER.promo_id = new_promo_id
     WHERE PR_ORDER.order_id = mod_order_id;
-    # NEED TRIGGER FOR 
 END $$
 DELIMITER ;
 
 
-# calculate cus promotion: 1 point = 1,000 VND
-DROP FUNCTION IF EXISTS func_cal_cus_promo;
+# calculate customer redemption promotion: 1 point = 1,000 VND
+DROP FUNCTION IF EXISTS func_cal_red_money;
 DELIMITER $$
-CREATE FUNCTION func_cal_cus_promo (
+CREATE FUNCTION func_cal_red_money (
 	mem_id		INT,
     redem_point	INT
 ) RETURNS INT DETERMINISTIC
@@ -242,6 +269,7 @@ BEGIN
 	DECLARE cus_point INT DEFAULT 0;
     DECLARE promo_money INT DEFAULT 0;
     SET cus_point = (SELECT acc_point FROM CUSTOMER WHERE mem_id = CUSTOMER.cus_id);
+    
     IF cus_point = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing customer ID: ', CAST(mem_id as CHAR));
 		SIGNAL SQLSTATE '01000'
@@ -255,44 +283,152 @@ BEGIN
 				RETURN 0;
 		END IF;
 
-		SET promo_money = cus_point * 1000;
+		SET promo_money = redem_point * 1000;
     END IF;
-    UPDATE CUSTOMER
-    SET CUSTOMER.promo_point = CUSTOMER.promo_point - redem_point;
+    
     RETURN promo_money;
 END $$
 DELIMITER ;
 
-# trigger for update new total money after insert promotion redemption
-DROP TRIGGER IF EXISTS trig_update_total_money_ins;
+
+# update customer's accumulation points after paying an order
+DROP PROCEDURE IF EXISTS proc_update_cus_acc_points;
 DELIMITER $$
-CREATE TRIGGER trig_update_total_money_ins AFTER UPDATE ON PR_ORDER
-FOR EACH ROW
+CREATE PROCEDURE proc_update_cus_acc_points(
+	paid_order_id	INT
+)
 BEGIN
-	CALL proc_update_total_money(NEW.order_id);
-END$$
+	DECLARE order_status BOOL;
+    DECLARE paid_cus_id INT DEFAULT 0;
+    DECLARE redem_point INT DEFAULT 0;
+    SET order_status = (SELECT stat FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
+	IF order_status = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(paid_order_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    IF order_status = FALSE THEN
+		SET @error_msg = CONCAT('Order ID: ', CAST(paid_order_id as CHAR), ' has not been paid yet');
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    SET paid_cus_id = (SELECT cus_id FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
+    SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
+    UPDATE CUSTOMER
+    SET CUSTOMER.promo_point = CUSTOMER.promo_point - redem_point
+    WHERE CUSTOMER.cus_id = paid_cus_id;
+    
+END $$
 DELIMITER ;
 
-# precedure for update new total money after updatepromotion redemption
-DROP PROCEDURE IF EXISTS proc_update_total_money;
+
+DROP TRIGGER IF EXISTS trig_update_total_money;
 DELIMITER $$
-CREATE PROCEDURE proc_update_total_money(
+CREATE TRIGGER trig_update_total_money AFTER UPDATE ON PRODUCT_ORDER
+FOR EACH ROW
+BEGIN
+	DECLARE up_promo_id INT DEFAULT 0;
+    UPDATE PR_ORDER 
+    SET PR_ORDER.total = (SELECT SUM(PRODUCT_ORDER.price * PRODUCT_ORDER.quantity)
+						  WHERE PRODUCT_ORDER.order_id = NEW.order_id)
+	WHERE PR_ORDER.order_id = NEW.order_id;
+    
+    SET up_promo_id = (SELECT promo_id FROM PR_ORDER WHERE PR_ORDER.promo_id = up_promo_id);
+    
+    IF up_promo_id > 0 THEN
+		CALL proc_update_total_money_perc_promo(NEW.order_id);
+	ELSE
+		CALL proc_update_total_money_perc_promo(NEW.order_id);
+	END IF;
+
+END $$
+DELIMITER ;
+
+
+# precedure for update new total money after update promotion redemption
+DROP PROCEDURE IF EXISTS proc_update_total_money_red_promo;
+DELIMITER $$
+CREATE PROCEDURE proc_update_total_money_red_promo (
 	mod_order_id	INT
 )
 BEGIN
 	DECLARE cus_id	INT DEFAULT 0;
     DECLARE redem_point INT DEFAULT 0;
-    DECLARE promo_money INT DEFAULT 0;
+    DECLARE promo_money INT DEFAULT 0;    
 	SET cus_id = (SELECT cus_id FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
-    SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
-	SET promo_money = func_cal_cus_promo(cus_id, redem_point);
-    UPDATE PR_ORDER
-    SET PR_ORDER.total = PR_ORDER.total - promo_money
-    WHERE PR_ORDER.order_id = mod_order_id;
+	SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
+	SET promo_money = func_cal_red_money(cus_id, redem_point);
+	UPDATE PR_ORDER
+	SET PR_ORDER.total = PR_ORDER.total - promo_money
+	WHERE PR_ORDER.order_id = mod_order_id;
 END $$
 DELIMITER ;
 
 
+# procedure for update new total money after update percentage promotion
+DROP PROCEDURE IF EXISTS proc_update_total_money_perc_promo;
+DELIMITER $$
+CREATE PROCEDURE proc_update_total_money_perc_promo (
+	mod_order_id	INT
+)
+BEGIN
+	DECLARE mod_promo_id INT;
+    SET mod_promo_id = (SELECT promo_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
+	IF (SELECT promo_type FROM PROMOTION WHERE PROMOTION.promo_id = mod_promo_id) = FALSE THEN
+		SET @promo_per = (SELECT promo_per FROM PERC_PROMOTION WHERE PERC_PROMOTION.promo_id = mod_promo_id);
+		UPDATE PR_ORDER
+		SET PR_ORDER.total = PR_ORDER.total * @promo_per / 100
+		WHERE PR_ORDER.order_id = mod_order_id;
+	END IF;
+END $$
+DELIMITER ;
+
+
+# procedure for insert gift products
+DROP PROCEDURE IF EXISTS proc_insert_gift_product;
+DELIMITER $$
+CREATE PROCEDURE proc_insert_gift_product (
+	add_order_id	INT,
+    gift_pr_id		INT,
+    add_size		CHAR(1),
+    add_quantity	INT
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = add_order_id) = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(add_order_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    IF (SELECT pr_id FROM PRODUCT WHERE PRODUCT.pr_id = gift_order_id) = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(add_order_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    IF gift_pr_id NOT IN (SELECT pr_id FROM PRODUCT_GIFT) THEN
+		SET @error_msg = CONCAT('Product ID: ', CAST(gift_pr_id as CHAR), ' not in gift products');
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    IF (SELECT * FROM PRODUCT_ORDER WHERE pr_id = gift_pr_id AND order_id = add_order_id AND add_size = size) = NULL THEN
+		INSERT INTO PRODUCT_ORDER VALUES(gift_pr_id, add_order_id, add_size, 0, add_quantity, DEFAULT);
+	ELSE 
+		UPDATE 	PRODUCT_ORDER
+        SET	   	PRODUCT_ORDER.price = add_price,
+                PRODUCT_ORDER.quantity = add_quantity
+		WHERE	PRODUCT_ORDER.pr_id = gift_pr_id 
+				AND PRODUCT_ORDER.order_id = add_order_id
+				AND	PRODUCT_ORDER.size = add_size;
+	END IF;
+END $$
+DELIMITER ;
+
+
+# procedure for deleting a product in an order
 DROP PROCEDURE IF EXISTS proc_delete_product_order;
 DELIMITER $$
 CREATE PROCEDURE proc_delete_product_order (
@@ -338,7 +474,7 @@ END $$
 DELIMITER ;
 
 
-# delete a receipt
+# delete an order, also delete corresponding receipt
 DROP PROCEDURE IF EXISTS proc_del_order;
 DELIMITER $$
 CREATE PROCEDURE proc_del_order (
@@ -350,6 +486,8 @@ BEGIN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
+    
+    DELETE FROM RECEIPT WHERE RECEIPT.order_id = del_order_id;
     DELETE FROM PR_ORDER WHERE order_id = del_order_id;
 END $$
 DELIMITER ;

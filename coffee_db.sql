@@ -150,14 +150,14 @@ DROP TABLE IF EXISTS PROMOTION;
 CREATE TABLE PROMOTION (
 	promo_id	INT		PRIMARY KEY,
     start_date	DATE	NOT NULL,
-    end_date	DATE	NOT NULL
+    end_date	DATE	NOT NULL,
+	promo_type	BOOL	NOT NULL	DEFAULT 0	# 0: KM %, 1: KM mua x tang y
 );
 
 DROP TABLE IF EXISTS PERC_PROMOTION;
 CREATE TABLE PERC_PROMOTION (
 	promo_id	INT		PRIMARY KEY,
-    promo_per	INT,	# phan tram khuyen mai
-	min_num		INT,	# so luong toi thieu
+    promo_per	INT,	# phan tram khuyen mai (40% luu 40)
     CONSTRAINT 	fk_perc_promo
 				FOREIGN KEY (promo_id) 
 				REFERENCES PROMOTION(promo_id) 
@@ -243,7 +243,6 @@ CREATE TABLE RECEIPT (
     order_id	INT		NOT NULL,
     pay_day		DATE	NOT NULL,
     pay_time	TIME	NOT NULL,
-    pay_med		CHAR(1)	NOT NULL	DEFAULT 'M',	# phuong thuc thanh toan: tien mat, momo, chuyen khoan
     promo_red	INT, 	# khuyen mai quy doi
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
@@ -270,6 +269,7 @@ CREATE TABLE  PRODUCT_ORDER (
     PRIMARY KEY (pr_id, order_id, size),
     price		INT		NOT NULL,
     quantity 	INT		NOT NULL,
+    is_gift		BOOL	DEFAULT FALSE,
     CONSTRAINT	fk_product_order
 				FOREIGN KEY (pr_id)
                 REFERENCES PRODUCT(pr_id)
