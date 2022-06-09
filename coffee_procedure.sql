@@ -9,18 +9,29 @@ CREATE PROCEDURE insert_branch(
     iaddress 	VARCHAR(100)
 )
 BEGIN
-	IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) <> NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE br_num INT DEFAULT 0;
+    DECLARE mng_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_num FROM BRANCH WHERE br_id = ibr_id;
+    SELECT COUNT(*) INTO mng_exs FROM EMPLOYEE WHERE emp_id = imng_id;
+    
+	IF br_num > 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'The branch ID has already registered';
 	END IF;
     
-    IF (SELECT emp_id FROM EMPLOYEE WHERE emp_id = imng_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+    IF mng_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'The manager ID does not exist';
 	END IF;
     
+    IF (SELECT br_id FROM EMPLOYEE WHERE emp_id = imng_id) <> ibr_id THEN
+		SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'This employee works at another branch';
+	END IF;
+    
 	INSERT INTO BRANCH 
-    VALUES (ibr_id, imng_id, iadd_num);
+    VALUES (ibr_id, imng_id, iaddress);
 END //
 
 DELIMITER //
@@ -30,14 +41,25 @@ CREATE PROCEDURE update_mng_branch(
     imng_id 	INT
 )
 BEGIN
-	IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE br_exs INT DEFAULT 0;
+    DECLARE mng_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    SELECT COUNT(*) INTO mng_exs FROM EMPLOYEE WHERE emp_id = imng_id;
+
+	IF (br_exs = 0) THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing branch';
 	END IF;
     
-    IF (SELECT emp_id FROM EMPLOYEE WHERE emp_id = imng_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+    IF (mng_exs = 0) THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing manager';
+	END IF;
+    
+    IF (SELECT br_id FROM EMPLOYEE WHERE emp_id = imng_id) <> ibr_id THEN
+		SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'This employee works at another branch';
 	END IF;
     
 	UPDATE BRANCH
@@ -51,10 +73,16 @@ CREATE PROCEDURE delete_branch(
 	ibr_id		INT
 )
 BEGIN
-	IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE br_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    
+	IF br_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find branch';
 	END IF;
+    
+    CALL delete_all_furniture(ibr_id);
     
 	DELETE FROM BRANCH 
     WHERE br_id = ibr_id;
@@ -71,16 +99,25 @@ CREATE PROCEDURE insert_furniture(
     iquantity 	INT
 )
 BEGIN
-	IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE count INT DEFAULT 0;
+	DECLARE br_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    
+	IF br_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing branch';
 	END IF;
     
-    IF (SELECT * FROM FURNITURE WHERE fur_id = ifur_id AND br_id = ibr_id) <> NULL THEN
-		UPDATE FURNITURE SET quantity = quantity + iquantity WHERE fur_id = ifur_id AND br_id = ibr_id;
+    SELECT COUNT(*) INTO count FROM FURNITURE WHERE fur_id = ifur_id AND br_id = ibr_id;
+    
+    IF count > 0 THEN
+		UPDATE FURNITURE 
+		SET quantity = quantity + iquantity 
+		WHERE fur_id = ifur_id AND br_id = ibr_id;
 	ELSE
-		INSERT INTO FURNITURE 
-        VALUES (ifur_id, ibr_id, ifurname, iquantity);
+		INSERT INTO FURNITURE
+        VALUES(ifur_id, ibr_id, ifurname, iquantity);
 	END IF;
 END //
 
@@ -92,12 +129,18 @@ CREATE PROCEDURE update_fur_quantity(
     iquantity 	INT
 )
 BEGIN 
-	IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE br_exs INT DEFAULT 0;
+    DECLARE fur_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    SELECT COUNT(*) INTO fur_exs FROM FURNITURE WHERE br_id = ibr_id AND fur_id = ifur_id;
+    
+	IF br_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing branch';
 	END IF;
     
-    IF (SELECT fur_id FROM FURNITURE WHERE fur_id = ifur_id) = NULL THEN
+    IF fur_exs = 0 THEN
 		SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Cannot find existing furniture';
 	END IF;
@@ -108,24 +151,49 @@ BEGIN
 END //
 
 DELIMITER //
-DROP PROCEDURE IF EXISTS delete_furniture;
-CREATE PROCEDURE delete_furniture(
+DROP PROCEDURE IF EXISTS delete_one_furniture;
+CREATE PROCEDURE delete_one_furniture(
 	ifur_id 	INT, 
     ibr_id		INT
 )
 BEGIN
-	IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE br_exs INT DEFAULT 0;
+    DECLARE fur_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    SELECT COUNT(*) INTO fur_exs FROM FURNITURE WHERE br_id = ibr_id AND fur_id = ifur_id;
+
+	IF br_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing branch';
 	END IF;
     
-    IF (SELECT fur_id FROM FURNITURE WHERE fur_id = ifur_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+    IF fur_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing furniture';
 	END IF;
 
 	DELETE FROM FURNITURE 
     WHERE fur_id = ifur_id AND br_id = ibr_id;
+END //
+
+DELIMITER //
+DROP PROCEDURE IF EXISTS delete_all_furniture;
+CREATE PROCEDURE delete_all_furniture(
+	ibr_id		INT
+)
+BEGIN
+	DECLARE br_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    
+	IF br_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Cannot find existing branch';
+	END IF;
+    
+    DELETE FROM FURNITURE
+    WHERE br_id = ibr_id;
 END //
 
 
@@ -134,11 +202,15 @@ DELIMITER //
 DROP PROCEDURE IF EXISTS insert_deliservice;
 CREATE PROCEDURE insert_deliservice(
 	ideli_ser_id 	INT, 
-    i_deli_ser_name VARCHAR(20)
+    ideli_ser_name VARCHAR(20)
 )
 BEGIN 
-	IF (SELECT deli_ser_id FROM DELI_SERVICE WHERE deli_ser_id = ideli_ser_id) <> NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE deli_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO deli_exs FROM DELI_SERVICE WHERE deli_ser_id = ideli_ser_id;
+
+	IF deli_exs <> 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Delivery service existed';
 	END IF;
             
@@ -153,12 +225,18 @@ CREATE PROCEDURE update_ser_name(
     new_ser_name	VARCHAR(20)
 )
 BEGIN
-	IF (SELECT deli_ser_id FROM DELI_SERVICE WHERE deli_ser_id = ideli_ser_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE deli_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO deli_exs FROM DELI_SERVICE WHERE deli_ser_id = ideli_ser_id;
+    
+	IF deli_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing delivery service';
 	END IF;
     
-    
+    UPDATE DELI_SERVICE
+	SET deli_ser_name = new_ser_name
+	WHERE deli_ser_id = ideli_ser_id;
 END //
 
 
@@ -168,8 +246,12 @@ CREATE PROCEDURE delete_deliservice(
 	ideli_ser_id	INT
 )
 BEGIN
-	IF (SELECT deli_ser_id FROM DELI_SERVICE WHERE deli_ser_id = ideli_ser_id) = NULL THEN
-		SIGNAL SQLSTATE '01000'
+	DECLARE deli_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO deli_exs FROM DELI_SERVICE WHERE deli_ser_id = ideli_ser_id;
+    
+	IF deli_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing delivery service';
 	END IF;
     
@@ -184,23 +266,29 @@ CREATE PROCEDURE revenue_stat(
     edate 		DATETIME
 )
 BEGIN
+	DECLARE rec_exs INT DEFAULT 0;
+
 	IF (bdate > edate) THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Start day cannot be after the end one';
 	END IF;
+    
+    SELECT COUNT(*)
+    INTO rec_exs
+	FROM RECEIPT 
+	WHERE (pay_day > DATE(bdate) OR (pay_day = DATE(bdate) AND pay_time >= TIME(bdate))) AND
+		  (pay_day < DATE(edate) OR (pay_day = DATE(edate) AND pay_time <= TIME(edate)));
 
-	IF (SELECT rec_id 
-		FROM RECEIPT 
-        WHERE pay_day BETWEEN DATE(bdate) AND DATE(edate) AND 
-			  pay_time BETWEEN TIME(bdate) AND TIME(edate)) THEN
-		SIGNAL SQLSTATE '01000'
+	IF rec_exs = 0 THEN
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing receipt in this period of time';
 	END IF;
     
-    SELECT SUM(total) AS rev_total
+    SELECT br_id AS `BRANCH ID`, SUM(total) AS `TOTAL REVENUE`
     FROM RECEIPT
-	WHERE pay_day BETWEEN DATE(bdate) AND DATE(edate) AND 
-		  pay_time BETWEEN TIME(bdate) AND TIME(edate)
+	WHERE (pay_day > DATE(bdate) OR (pay_day = DATE(bdate) AND pay_time >= TIME(bdate))) AND
+		  (pay_day < DATE(edate) OR (pay_day = DATE(edate) AND pay_time <= TIME(edate))) AND
+		   br_id IN (SELECT br_id FROM BRANCH)
 	GROUP BY br_id;
 END //
 
@@ -210,15 +298,21 @@ CREATE PROCEDURE pr_apply_promotion(
 	ipromo_id 		INT
 )
 BEGIN
-	IF (SELECT promo_id FROM PROMOTION WHERE promo_id = ipromo_id) = NULL THEN
+	DECLARE pro_exs INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO pro_exs FROM PROMOTION WHERE promo_id = ipromo_id;
+    
+	IF pro_exs = 0 THEN
 		SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Cannot find existing promotion';
 	END IF;
     
-    SELECT pr_id, pr_name AS ID, PNAME
-	FROM PRODUCT JOIN PR_APPLY_PROMO ON PRODUCT.pr_id = PR_APPLY_PROMO.pr_id
+    SELECT PRODUCT.pr_id AS `ID`, pr_name AS `PRODUCT`, size AS `SIZE`, price  AS `PRICE`
+	FROM (PRODUCT INNER JOIN PR_APPLY_PROMO 
+		  ON PRODUCT.pr_id = PR_APPLY_PROMO.pr_id) INNER JOIN PR_PRICE 
+          ON PRODUCT.pr_id = PR_PRICE.pr_id
     WHERE promo_id = ipromo_id;
-END; //
+END //
 
 
 DELIMITER //
@@ -232,29 +326,26 @@ RETURNS INT
 DETERMINISTIC
 BEGIN
 	DECLARE revenue INT DEFAULT 0;
+    DECLARE br_exs INT DEFAULT 0;
     
-    IF (SELECT br_id FROM BRANCH WHERE br_id = ibr_id) = NULL THEN 
-		SIGNAL SQLSTATE '01000'
+    SELECT COUNT(*) INTO br_exs FROM BRANCH WHERE br_id = ibr_id;
+    
+    IF br_exs = 0 THEN 
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing branch';
 	END IF;
      
     IF (bdate > edate) THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Start day cannot be after the end one';
 	END IF;
         
-    IF (SELECT rec_id 
-		FROM RECEIPT 
-        WHERE br_id = ibr_id AND 
-			  pay_day BETWEEN DATE(bdate) AND DATE(edate) AND 
-			  pay_time BETWEEN TIME(bdate) AND TIME(edate)) <> NULL THEN
-		SELECT SUM(total) 
-		INTO revenue
-		FROM RECEIPT
-		WHERE br_id = ibr_id AND
-			  pay_day BETWEEN DATE(bdate) AND DATE(edate) AND 
-			  pay_time BETWEEN TIME(bdate) AND TIME(edate);
-	END IF;
+	SELECT COALESCE(SUM(total) , 0)
+	INTO revenue
+	FROM RECEIPT
+	WHERE br_id = ibr_id AND
+		  (pay_day > DATE(bdate) OR (pay_day = DATE(bdate) AND pay_time >= TIME(bdate))) AND
+		  (pay_day < DATE(edate) OR (pay_day = DATE(edate) AND pay_time <= TIME(edate)));
     
 	RETURN revenue;
-END; //
+END //

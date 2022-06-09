@@ -1,16 +1,19 @@
 INSERT, UPDATE, DELETE PROCEDURE:
     * branch:
-        + insert_branch (DONE);
-        + update_mng_branch (DONE): Change manager in the specific branch;
-        + delete_branch (DONE);
+        + insert_branch (TESTED);
+        + update_mng_branch (TESTED): Change manager in the specific branch;
+        + delete_branch (TESTED):
+            - Old: Delete a specific branch;
+            - Update: Delete a specific branch with its furniture;
     * furniture:
-        + insert_furniture (DONE): Increase quantity if the furniture exists else register the new furniture;
-        + update_fur_quantity (DONE): Update quantity of furniture;
-        + delete_furniture (DONE);
+        + insert_furniture (TESTED): Increase quantity if the furniture exists else register the new furniture;
+        + update_fur_quantity (TESTED): Update quantity of furniture;
+        + delete_one_furniture (RENAMED - TESTED): delete_furniture;
+        + delete_all_furniture (NEW - TESTED): delete all furniture in a specific branch;
     * deli_service:
-        + insert_deliservice (DONE);
-        + update_ser_name (DONE): Change name of service;
-        + delete_deliservice (DONE);
+        + insert_deliservice (TESTED);
+        + update_ser_name (TESTED): Change name of service;
+        + delete_deliservice (TESTED);
 
 
 TRIGGER:
@@ -18,9 +21,9 @@ TRIGGER:
 
 
 DISPLAY DATA PROCEDURE:
-    * revenue_stat (DONE): Show revenue in the period of time
-    * pr_apply_promotion (DONE): list of products that applied the promotion
+    * revenue_stat (TESTED): Show revenue in the period of time
+    * pr_apply_promotion (TESTED): list of products that applied the promotion
 
 
 FUNTION:
-    * one_branch_revenue (DONE): Calculate the revenue of a branch in the specific period of time
+    * one_branch_revenue (TESTED): Calculate the revenue of a branch in the specific period of time
