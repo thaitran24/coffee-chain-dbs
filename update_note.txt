@@ -1,21 +1,28 @@
+DATABASE CHANGES:
+- Delete pay_med in RECEIPT
+- Delete min_num in PERC_PROMOTION
+- Add promo_type in PROMOTION
 1. INSERT:
-- Insert new Order: proc_insert_order
-- Create Receipt after creating an Order: trig_create_receipt
-- Insert Product to an Order (insert/update): proc_update_prod_order (normal products), proc_insert_gift_product (gift products)
+- Insert new Order: proc_insert_order(all order attributes)
+- Create Receipt after creating an Order: trig_create_receipt()
+- Insert Product to an Order (insert/update): proc_update_prod_order (add_order_id, add_prod_id, add_size, add_price, add_quantity), proc_insert_gift_product (add_order_id, add_prod_id, add_size, add_quantity)
 2. UPDATE:
-- Update Promotion redemption: proc_update_order_promo_red => func_cal_red_money (function): calculate redemption promotion money
-- Update Customer's accumulation points after paying an order: proc_update_cus_acc_points
-- Update Order status (unpaid -> paid): proc_set_order_status
-- Update Customer id (before paying): proc_update_cus_id
-- Update Order total money: 
-- Update Order promotion id: proc_update_order_promo_id
-- Update Order total money (trigger): trig_update_total_money
+- Update Promotion redemption: proc_update_order_promo_red(mod_order_id, redem_point) => func_cal_red_money (mem_id, redem_point): calculate redemption promotion money
+- Update Customer's accumulation points after paying an order: proc_update_cus_acc_points(paid_order_id)
+- Update Order status (unpaid -> paid): proc_set_order_status(mod_order_id)
+- Update Customer id (before paying): proc_update_cus_id(mod_order_id, mod_cus_id)
+- Update Order receive address: proc_update_receive_address (mod_order_id, mod_address)
+- Update Order promotion id: proc_update_order_promo_id(mod_order_id, new_promo_id)
+- Update Order total money (trigger): trig_update_total_money: CALL 
+        + proc_update_total_money_perc_promo(order_id): update total money with percentage promotion
+        + proc_update_total_money_red_promo(order_id): update total money with accumulation points
 3. DELETE
-- Delete a Product from Order: proc_delete_product_order
-- Delete an Order (also delete corresponding Receipt): proc_del_order
+- Delete a Product from Order: proc_delete_product_order(del_order_id, del_pr_id, del_size)
+- Delete an Order (also delete corresponding Receipt): proc_del_order(del_order_id)
+- Delete a Receipt: proc_del_receipt(del_rec_id)
 4. OTHERS: 
-- View all products of an Order: proc_view_order_products
-- View all selling products order by sales (in a branch and in a period of time: start_date/end_date): proc_selling_prods
-- View all promotion's revenue: proc_promo_sales
-- View all branch's revenue (in a period of time: start_date/end_date): proc_branch_revenue
-- View money spent of all customers: proc_cus_money_spent
+- View all products of an Order: proc_view_order_products(view_order_id)
+- View all selling products order by sales (in a branch and in a period of time: start_date/end_date): proc_selling_prods(branch_id, start_date, end_date)
+- View all promotion's revenue: proc_promo_sales()
+- View all branch's revenue (in a period of time: start_date/end_date): proc_branch_revenue(start_date, end_date)
+- View money spent of all customers: proc_cus_money_spent()
