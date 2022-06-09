@@ -1,5 +1,7 @@
-delimiter $$
+-- INSERt PROCEDURE
+delimiter ;
 DROP PROCEDURE IF EXISTS Insert_Customer;
+delimiter $$
 CREATE PROCEDURE Insert_Customer
 (first_name VARCHAR(10), last_name VARCHAR(20), id INT, phone_number CHAR(10), s CHAR(1), add_number INT, mail VARCHAR(40), reg_date DATE)
 BEGIN
@@ -33,8 +35,9 @@ BEGIN
 END 
 $$
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Delete_Customer;
+delimiter $$
 CREATE PROCEDURE Delete_Customer
 (id INT)
 BEGIN
@@ -54,9 +57,9 @@ BEGIN
 END 
 $$
 
-
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_ID;
+delimiter $$
 CREATE PROCEDURE Update_Customer_ID
 (id INT, new_id INT)
 BEGIN
@@ -88,9 +91,9 @@ END
 $$
 
 
-
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_Name;
+delimiter $$
 CREATE PROCEDURE Update_Customer_Name
 (id INT, first_name VARCHAR(10), last_name VARCHAR(20))
 BEGIN
@@ -112,9 +115,9 @@ BEGIN
 END 
 $$
 
-
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_Phone_Number;
+delimiter $$
 CREATE PROCEDURE Update_Customer_Phone_Number
 (id INT, p_num CHAR(10))
 BEGIN
@@ -142,8 +145,10 @@ END
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_Add_Num;
+delimiter $$
+
 CREATE PROCEDURE Update_Customer_Add_Num
 (id INT, new_add_num INT)
 BEGIN
@@ -166,8 +171,10 @@ END
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_Sex;
+delimiter $$
+
 CREATE PROCEDURE Update_Customer_Sex
 (id INT, S CHAR(1))
 BEGIN
@@ -188,9 +195,9 @@ BEGIN
 END 
 $$
 
-
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_Email;
+delimiter $$
 CREATE PROCEDURE Update_Customer_Email
 (id INT, mail VARCHAR(40))
 BEGIN
@@ -220,8 +227,9 @@ END
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Customer_Reg_Date;
+delimiter $$
 CREATE PROCEDURE Update_Customer_Reg_Date
 (id INT, new_reg_date DATE)
 BEGIN
@@ -232,14 +240,14 @@ BEGIN
 	-- khach hang khong ton tai
     IF c_count = 0 THEN
 		SET @error_msg = CONCAT('Khach hang voi ID: ',CAST(id AS CHAR), ' khong ton tai');
-		SIGNAL SQLSTATE '45000' SET 
+		SIGNAL SQLSTATE '45000' SET
 		MESSAGE_TEXT = @error_msg; 
 	END IF;
     
 	UPDATE CUSTOMER
     SET res_date = new_reg_date
     WHERE cus_id = id;
-END 
+END
 $$
 
 

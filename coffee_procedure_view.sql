@@ -1,7 +1,7 @@
 
-delimiter $$
-
+delimiter ;
 DROP PROCEDURE IF EXISTS Get_Branch_Material;
+delimiter $$
 CREATE PROCEDURE Get_Branch_Material
 (branch_id INT)
 BEGIN
@@ -14,9 +14,9 @@ END
 $$
 
 
-delimiter $$
-
+delimiter ;
 DROP PROCEDURE IF EXISTS Get_Branch_Income;
+delimiter $$
 CREATE PROCEDURE Get_Branch_Income
 (o_month INT, o_year INT)
 BEGIN

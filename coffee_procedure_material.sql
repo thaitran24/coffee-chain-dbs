@@ -1,8 +1,8 @@
 USE coffee_chain_db;
 
-
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Insert_Material;
+delimiter $$
 CREATE PROCEDURE Insert_Material 
 (new_id INT, new_name VARCHAR(20), new_quantity INT)
 BEGIN
@@ -31,8 +31,9 @@ BEGIN
 END 
 $$
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Delete_Material;
+delimiter $$
 CREATE PROCEDURE Delete_Material
 (d_id INT)
 BEGIN
@@ -51,8 +52,9 @@ END
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Material_ID;
+delimiter $$
 CREATE PROCEDURE Update_Material_ID
 (u_id INT, new_id INT)
 BEGIN
@@ -82,8 +84,9 @@ END
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Material_Name;
+delimiter $$
 CREATE PROCEDURE Update_Material_Name
 (u_id INT, new_name VARCHAR(20))
 BEGIN

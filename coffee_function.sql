@@ -1,7 +1,7 @@
 
-delimiter $$
-
+delimiter ;
 DROP FUNCTION IF EXISTS Check_monthly_income;
+delimiter $$
 CREATE FUNCTION Check_monthly_income(b_id INT, target INT, o_month INT, o_year INT)
 	   RETURNS VARCHAR(60) DETERMINISTIC
 BEGIN

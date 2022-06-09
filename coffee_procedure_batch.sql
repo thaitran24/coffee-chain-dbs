@@ -1,22 +1,25 @@
 USE coffee_chain_db;
 
 -- INSERT PROCEDURE
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Insert_Batch;
+delimiter $$
 CREATE PROCEDURE Insert_Batch
 (new_id INT, 
-new_m_id INT, 
+new_m_id INT,
+new_m_name VARCHAR(20), 
 new_mgr_id INT, 
 new_i_date DATE, 
 new_e_date DATE, 
 new_quantity FLOAT)
 BEGIN
-	DECLARE m_count INT DEFAULT 0;
+	DECLARE b_count INT DEFAULT 0;
 	DECLARE e_count INT DEFAULT 0;
+	DECLARE m_count INT DEFAULT 0;
     
-	SELECT COUNT(*) INTO m_count FROM M_BATCH WHERE ba_id = new_id;
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = new_id;
 	-- lo hang da ton tai
-    IF m_count > 0 THEN
+    IF b_count > 0 THEN
 		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(new_id AS CHAR), ' da ton tai');
 		SIGNAL SQLSTATE '45000' SET 
 		MESSAGE_TEXT = @error_msg; 
@@ -43,16 +46,24 @@ BEGIN
 		SIGNAL SQLSTATE '45000' SET 
 		MESSAGE_TEXT = @error_msg;	
 	END IF;
+    
+	SELECT COUNT(*) INTO m_count FROM M_BATCH WHERE m_id = new_m_id AND m_name != new_m_name ANd ba_id != new_id;
+	IF m_count > 0 THEN
+		UPDATE M_BATCH
+        SET m_name = new_m_name
+        WHERE m_id = new_m_id;
+    END IF;
         
-	
 	INSERT INTO M_BATCH 
-	VALUES(new_id, new_m_id, new_mgr_id, new_i_date, new_e_date, new_quantity);
+	VALUES(new_id, new_m_id, new_m_name, new_mgr_id, new_i_date, new_e_date, new_quantity);
+    
 END 
 $$
 
 -- DELETE PROCEDURE
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Delete_Batch;
+delimiter $$
 CREATE PROCEDURE Delete_Batch
 (d_id INT)
 BEGIN
@@ -73,8 +84,9 @@ END
 $$
 
 -- UPDATE PROCEDURE
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Batch_ID;
+delimiter $$
 CREATE PROCEDURE Update_Batch_ID
 (old_id INT, new_id INT)
 BEGIN
@@ -105,8 +117,9 @@ END
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Batch_Manager;
+delimiter $$
 CREATE PROCEDURE Update_Batch_Manager
 (b_id INT, new_mng_id INT)
 BEGIN
@@ -122,7 +135,6 @@ BEGIN
 		MESSAGE_TEXT = @error_msg; 
 	END IF;
     
-    
 	SELECT COUNT(*) INTO n_count FROM EMPLOYEE WHERE emp_id = new_mng_id;
     -- quan li khong ton tai
 	IF n_count = 0 THEN
@@ -137,13 +149,14 @@ BEGIN
 END 
 $$
 
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Material_ID;
 delimiter $$
-
-DROP PROCEDURE IF EXISTS Update_Batch_Material;
-CREATE PROCEDURE Update_Batch_Material
+CREATE PROCEDURE Update_Batch_Material_ID
 (b_id INT, new_m_id INT)
 BEGIN
 	DECLARE b_count INT DEFAULT 0;
+    DECLARE old_m_id INT DEFAULT 0;
 
 	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
     
@@ -154,16 +167,44 @@ BEGIN
 		MESSAGE_TEXT = @error_msg; 
 	END IF;
     
+    SELECT m_id INTO old_m_id FROM M_BATCH WHERE ba_id = b_id;
     
 	UPDATE M_BATCH
     SET m_id = new_m_id
-    WHERE ba_id = b_id;
+    WHERE m_id = old_m_id;
+END 
+$$
+
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Material_Name;
+delimiter $$
+CREATE PROCEDURE Update_Batch_Material_Name
+(b_id INT, new_m_name VARCHAR(20))
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+    DECLARE old_name VARCHAR(20);
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+    SELECT m_name INTO old_name FROM M_BATCH WHERE ba_id = b_id;
+    
+	UPDATE M_BATCH
+    SET m_name = new_m_name
+    WHERE m_name = old_name;
 END 
 $$
 
 
-delimiter $$
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Batch_Import_Date;
+delimiter $$
 CREATE PROCEDURE Update_Batch_Import_Date
 (b_id INT, new_imp_date INT)
 BEGIN
@@ -194,9 +235,9 @@ BEGIN
 END 
 $$
 
-delimiter $$
-
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Batch_Export_Date;
+delimiter $$
 CREATE PROCEDURE Update_Batch_Export_Date
 (b_id INT, new_exp_date INT)
 BEGIN
@@ -228,9 +269,9 @@ END
 $$
 
 
-delimiter $$
-
+delimiter ;
 DROP PROCEDURE IF EXISTS Update_Batch_Quantity;
+delimiter $$
 CREATE PROCEDURE Update_Batch_Quantity
 (b_id INT, new_quantity INT)
 BEGIN
