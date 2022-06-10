@@ -12,3 +12,7 @@ DISPLAY DATA PROCEDURE:
 FUNCTION:
     + Check if a branch's monthly income pass a target or not : Done
     * Test: None
+
+**UPDATE:
+    Need to add column "m_name" after field "m_id" to M_BATCH table
+    Delete column "quantity" on MATERIAL table
