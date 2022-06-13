@@ -1,0 +1,87 @@
+.content-table{
+    transition: 0.3s all ease-in;
+    border-collapse: collapse;
+    margin: 25px;
+    font-size: 13px;
+    min-width: 400px;
+    width: 50vw;
+}
+
+.content-table thead{
+    background-color: #009879;
+    color: #fff;
+    text-align: left;
+    font-weight: bold;
+}
+
+.content-table tr:hover{
+    cursor: pointer;
+}
+
+
+.content-table th, 
+.content-table td{
+    padding: 0px 15px;
+    height: 45px;
+    min-width: 120px;
+}
+
+
+
+td{
+    border-bottom: 1px solid #dddddd;
+}
+
+td:nth-last-of-type(1), td:nth-last-of-type(2) { 
+background-color: transparent;
+    border-bottom: none;
+}
+
+td:nth-last-of-type(1), td:nth-last-of-type(2):hover{
+    cursor: auto;
+}
+
+
+.th-sort-asc::after{
+    content: "\25b4";
+    margin-left: 5px;
+}
+
+.th-sort-desc::after{
+    content: "\25be";
+}
+
+.th-sort-asc, .th-sort-desc{
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+
+
+tbody tr button{
+    display: none;
+    border: none;
+    background-color: transparent;
+    color: #fff;
+    border-radius: 5px;
+    padding: 10px;
+    height: 100%;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+
+.update{
+    background-color: #2ecc71;
+}
+
+.delete{
+    background-color: #e74c3c;
+}
+
+tbody tr button:hover{
+    cursor: pointer;
+}
+
+tbody tr.selected button{
+    display: block;
+}

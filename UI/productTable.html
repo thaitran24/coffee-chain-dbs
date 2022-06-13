@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="form.css">
+    <link rel="stylesheet" href="table.css">
+    <title>Product Manager!</title>
+  </head>
+  <body>
+    <header>
+        <div>Logo</div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search...">
+            <div class="search-btn">
+                <i class="fa fa-search"></i>
+            </div>
+        </div>
+        <button class="form-open add">Add product</button>
+        <button class="logout">Logout</button>
+
+    </header>
+    <div class="body">
+        <div class="table-container">
+            <table class="content-table">
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Product Name</th>
+                        <th>Size</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td> 18</td>
+                        <td> 456</td>
+                        <td> 123</td>
+                        <td> 456</td>
+                        <td>
+                            <button class="form-open update">
+                                Update
+                            </button>
+                        </td>
+                        <td>
+                            <button class="form-open delete">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>        
+        </div>
+    </div>
+
+
+
+    <div class="form-background close">
+        <div class="form-container">
+            <div class="form--title">
+                <h1>Update product</h1>
+            </div>
+            <form action="/addProduct" method="POST" class="form1">
+                <div class="form-control">
+                    <label for="ID">Product ID:</label>
+                    <input name="pr_id" type="text" id="ID" placeholder="Product ID">
+                    <i class="fa fa-check-circle"></i>
+                    <i class="fa fa-exclamation-circle"></i>
+                    <small>Error message</small>
+                </div>
+                <div class="form-control">
+                    <label for="product-name">Product name:</label>
+                    <input name="pr_name" type="text" id="product-name"placeholder="Product name">
+                    <i class="fa fa-check-circle"></i>
+                    <i class="fa fa-exclamation-circle"></i>
+                    <small>Error message</small>
+                </div>
+                <div class="form-size">
+                    <div class="form-control">
+                        <label for="small-size">Small size:</label>
+                        <input name="small_size" type="checkbox" id="small-size">
+                        <i class="fa fa-check-circle"></i>
+                        <i class="fa fa-exclamation-circle"></i>
+                        <small>Error message</small>
+                    </div>
+                    <div class="form-control">
+                        <label for="small-price">Price:</label>
+                        <input name="small_price"type="text" id="small-price"placeholder="Price">
+                        <i class="fa fa-check-circle"></i>
+                        <i class="fa fa-exclamation-circle"></i>
+                        <small>Error message</small>
+                    </div>
+                </div>
+                <div class="form-size">
+                    <div class="form-control">
+                        <label for="large-size">Large size:</label>
+                        <input name="large_size" type="checkbox" id="large-size">
+                        <i class="fa fa-check-circle"></i>
+                        <i class="fa fa-exclamation-circle"></i>
+                        <small>Error message</small>
+                    </div>
+                    <div class="form-control">
+                        <label for="large_price">Price:</label>
+                        <input name="large_price" type="text" id="large-price"placeholder="Price">
+                        <i class="fa fa-check-circle"></i>
+                        <i class="fa fa-exclamation-circle"></i>
+                        <small>Error message</small>
+                    </div>
+                </div>
+                <button type="submit">Submit</button>
+                <button type="button" class="form-close">Close</button>
+            </form>
+        </div>
+        
+    </div>
+    
+    <div class="form-background close">
+        <div class="form-container">
+            <div class="form--title">
+                <h1>Are you sure to delete this product?</h1>
+            </div>
+            <form action="/deleteProduct" method="POST" class="form2">
+                <div class="form-control">
+                    <label for="ID">Product ID:</label>
+                    <input name="delete_id" type="text" id="ID" placeholder="Product ID">
+                    <i class="fa fa-check-circle"></i>
+                    <i class="fa fa-exclamation-circle"></i>
+                    <small>Error message</small>
+                </div>
+                <button type="submit">Yes</button>
+                <button type="button" class="form-close">No</button>
+            </form>
+        </div>
+    </div>
+
+  </body>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script type ="module" src="./getProducts.js"></script>
+  <script type ="module" src="./table.js"></script>
+  <script type ="module" src="./formControl.js"></script>
+</html>
