@@ -87,9 +87,10 @@ CREATE TABLE PRODUCT (
 
 DROP TABLE IF EXISTS PR_PRICE;
 CREATE TABLE PR_PRICE (
-	pr_id		CHAR(6)		PRIMARY KEY,
+	pr_id		CHAR(6)		NOT NULL,
     size		CHAR(1)		NOT NULL,
     price		INT			NOT NULL,
+	PRIMARY KEY(pr_id, size),
     CONSTRAINT 	fk_product_price
 				FOREIGN KEY (pr_id) 
 				REFERENCES PRODUCT(pr_id) 

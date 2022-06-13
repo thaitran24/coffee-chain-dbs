@@ -127,12 +127,12 @@ CREATE PROCEDURE insert_prod_price (
 BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
-    SET @pr_prize = 0;
-    SET @pr_prize = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
+    SET @price_count = 0;
+    SET @price_count = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
     IF @pr_count = 0 THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input';
-    ELSEIF pr_prize <> 0 THEN
+    ELSEIF @price_count <> 0 THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Duplicate found! Product ID has already had its price';
     ELSE
