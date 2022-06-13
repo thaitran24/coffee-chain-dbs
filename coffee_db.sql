@@ -1,12 +1,12 @@
-drop database if exists coffee_db;
-create database coffee_db;
+DROP DATABASE IF EXISTS coffee_db;
+CREATE DATABASE coffee_db;
 USE coffee_db;
 
 DROP TABLE IF EXISTS BRANCH;
 CREATE TABLE BRANCH (
 	br_id		INT 			PRIMARY KEY,
     mng_id		INT				NOT NULL,
-    address		VARCHAR(100)	NOT NULL
+    address		VARCHAR(100)	NOT NULL	DEFAULT ''
 );
 
 DROP TABLE IF EXISTS FURNITURE;
@@ -29,7 +29,7 @@ CREATE TABLE EMPLOYEE (
     emp_id		INT			PRIMARY KEY,
     br_id		INT			NOT NULL,
     bdate		DATE		NOT NULL,
-    address		VARCHAR(100)NOT NULL,
+    address		VARCHAR(100)NOT NULL	DEFAULT '',
     sex			CHAR(1)		NOT NULL,
     startdate	DATE		NOT NULL,
     ssn			CHAR(10)	NOT NULL,
@@ -79,13 +79,15 @@ CREATE TABLE EMP_SHIFT (
 
 DROP TABLE IF EXISTS PRODUCT;
 CREATE TABLE PRODUCT (
-	pr_id		INT			PRIMARY KEY,
-	pr_name		VARCHAR(30)	NOT NULL
+	pr_id		CHAR(6)		PRIMARY KEY,
+	pr_name		VARCHAR(30)	NOT NULL,
+	pr_type		VARCHAR(30) NOT NULL,
+    pr_img		VARCHAR(150)NOT NULL
 );
 
 DROP TABLE IF EXISTS PR_PRICE;
 CREATE TABLE PR_PRICE (
-	pr_id		INT			PRIMARY KEY,
+	pr_id		CHAR(6)		PRIMARY KEY,
     size		CHAR(1)		NOT NULL,
     price		INT			NOT NULL,
     CONSTRAINT 	fk_product_price
@@ -121,7 +123,7 @@ CREATE TABLE M_BATCH (	# lo nguyen lieu
 DROP TABLE IF EXISTS PR_MATERIAL;
 CREATE TABLE PR_MATERIAL (
 	m_id		INT,
-    pr_id		INT,
+    pr_id		CHAR(6),
     PRIMARY KEY (m_id, pr_id),
     CONSTRAINT 	fk_material_pr
 				FOREIGN KEY (m_id) 
@@ -140,23 +142,43 @@ CREATE TABLE CUSTOMER (
     cus_id		INT			PRIMARY KEY,
     phone_num	CHAR(10)	NOT NULL,
     sex			CHAR(1)		NOT NULL,
-    address		VARCHAR(100)NOT NULL,
+    address		VARCHAR(100)NOT NULL	DEFAULT '',
     gmail		VARCHAR(40) NOT NULL,
-    res_date	DATE		NOT NULL
+    res_date	DATE		NOT NULL,
+    acc_point	INT			NOT NULL 	DEFAULT 0
 );
+
+DROP TABLE IF EXISTS ACCOUNT_INF;
+CREATE TABLE ACCOUNT_INF (
+	acc_id		INT			PRIMARY KEY,
+    acc_type	BOOL		NOT NULL,
+    acc_name	VARCHAR(24)	NOT NULL	UNIQUE,	# tai khoan
+    acc_pass	VARCHAR(24)	NOT NULL,			# mat khau
+    cus_id		INT			NOT NULL	UNIQUE,
+	emp_id		INT			NOT NULL	UNIQUE,
+    CONSTRAINT 	fk_cus_account
+				FOREIGN KEY (cus_id) 
+				REFERENCES CUSTOMER(cus_id) 
+				ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT 	fk_em_account
+				FOREIGN KEY (emp_id) 
+				REFERENCES EMPLOYEE(emp_id) 
+				ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
 
 DROP TABLE IF EXISTS PROMOTION;
 CREATE TABLE PROMOTION (
 	promo_id	INT		PRIMARY KEY,
     start_date	DATE	NOT NULL,
-    end_date	DATE	NOT NULL
+    end_date	DATE	NOT NULL,
+	promo_type	BOOL	NOT NULL	DEFAULT 0	# 0: KM %, 1: KM mua x tang y
 );
 
 DROP TABLE IF EXISTS PERC_PROMOTION;
 CREATE TABLE PERC_PROMOTION (
 	promo_id	INT		PRIMARY KEY,
-    promo_per	INT,	# phan tram khuyen mai
-	min_num		INT,	# so luong toi thieu
+    promo_per	INT,	# phan tram khuyen mai (40% luu 40)
     CONSTRAINT 	fk_perc_promo
 				FOREIGN KEY (promo_id) 
 				REFERENCES PROMOTION(promo_id) 
@@ -177,7 +199,7 @@ CREATE TABLE GIFT_PROMOTION (
 DROP TABLE IF EXISTS PR_APPLY_PROMO;
 CREATE TABLE PR_APPLY_PROMO (	# san pham duoc ap dung khuyen mai
 	promo_id	INT,
-    pr_id		INT,
+    pr_id		CHAR(6),
     PRIMARY KEY (promo_id, pr_id),
     CONSTRAINT 	fk_apply_promo
 				FOREIGN KEY (promo_id) 
@@ -192,7 +214,7 @@ CREATE TABLE PR_APPLY_PROMO (	# san pham duoc ap dung khuyen mai
 DROP TABLE IF EXISTS PRODUCT_GIFT;
 CREATE TABLE PRODUCT_GIFT (		# san pham duoc dung de tang
 	promo_id	INT,
-    pr_id		INT,
+    pr_id		CHAR(6),
     PRIMARY KEY (promo_id, pr_id),
     CONSTRAINT 	fk_gift_promo
 				FOREIGN KEY (promo_id) 
@@ -212,8 +234,8 @@ CREATE TABLE PR_ORDER (	# don hang
     promo_red	INT					DEFAULT 0,	# khuyen mai quy doi
     total		INT		NOT NULL	DEFAULT 0,
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
-    rec_address	VARCHAR(100),		# noi nhan hang
-    promo_id	INT,
+    rec_address	VARCHAR(100)		DEFAULT '',		# noi nhan hang
+    promo_id	INT					DEFAULT 0,
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
     emp_id		INT		NOT NULL,
@@ -242,7 +264,6 @@ CREATE TABLE RECEIPT (
     order_id	INT		NOT NULL,
     pay_day		DATE	NOT NULL,
     pay_time	TIME	NOT NULL,
-    pay_med		CHAR(1)	NOT NULL,	# phuong thuc thanh toan: tien mat, momo, chuyen khoan
     promo_red	INT, 	# khuyen mai quy doi
     br_id		INT		NOT NULL,
     cus_id		INT		NOT NULL,
@@ -254,7 +275,30 @@ CREATE TABLE RECEIPT (
 	CONSTRAINT 	fk_customer_receipt
 				FOREIGN KEY (cus_id) 
 				REFERENCES CUSTOMER(cus_id) 
+				ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT 	fk_order_receipt
+				FOREIGN KEY (order_id) 
+				REFERENCES PR_ORDER(order_id) 
 				ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+DROP TABLE IF EXISTS PRODUCT_ORDER;
+CREATE TABLE  PRODUCT_ORDER (
+	pr_id		CHAR(6) NOT NULL,
+    order_id	INT		NOT NULL,
+    size		CHAR(1)	NOT NULL,
+    PRIMARY KEY (pr_id, order_id, size),
+    price		INT		NOT NULL,
+    quantity 	INT		NOT NULL,
+    is_gift		BOOL	DEFAULT FALSE,
+    CONSTRAINT	fk_product_order
+				FOREIGN KEY (pr_id)
+                REFERENCES PRODUCT(pr_id)
+                ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT	fk_order_product
+				FOREIGN KEY (order_id)
+                REFERENCES PR_ORDER(order_id)
+                ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS DELI_SERVICE;

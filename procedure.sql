@@ -7,7 +7,7 @@ CREATE PROCEDURE insert_employee (
     fname       VARCHAR(10), 
     lname       VARCHAR(20), 
     new_emp_id  INT, 
-    br_id       INT,
+    cur_br_id   INT,
     bdate       DATE,
     address     VARCHAR(100),
     sex         CHAR(1),
@@ -23,18 +23,27 @@ CREATE PROCEDURE insert_employee (
 BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = new_emp_id);
+    SET @br_count = 0;
+    SET @br_count = (SELECT COUNT(*) FROM BRANCH WHERE br_id = cur_br_id);
     IF @e_count <> 0 THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Duplicate found! Employee ID must be unique.';
-    ELSEIF sex <> 'M' AND sex <> 'F' THEN
+    ELSEIF sex <> 'M' AND sex <> 'F' AND
+    gmail NOT REGEXP '^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9._-]@[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]\\.[a-zA-Z]{2,63}$' AND
+    length(phone_num) != 10 AND 
+    phone_num NOT REGEXP '0[0-9]+'
+    THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Invalid value! Please recheck your input';
     ELSEIF bdate > CURDATE() THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! Please recheck your input';
+    ELSEIF @br_count = 0 THEN
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input';
     ELSE        
         INSERT INTO EMPLOYEE
-        VALUES (fname, lname, new_emp_id, br_id, bdate, address, sex, startdate, ssn, 
+        VALUES (fname, lname, new_emp_id, cur_br_id, bdate, address, sex, startdate, ssn, 
                 b_account, salary_rate, phone_num, work_hour, gmail, degree, position);
 	END IF;
 END//
@@ -77,13 +86,13 @@ BEGIN
     SET @br_count = 0;
     SET @m_count = (SELECT COUNT(*) FROM SHIFT WHERE cur_shift_num = shift_num);
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE cur_emp_id = emp_id);
-    SET @br_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE cur_br_id = emp_id);
+    SET @br_count = (SELECT COUNT(*) FROM BRANCH WHERE br_id = cur_br_id);
     IF @s_count = 0 OR e_count = 0 OR br_count = 0 THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input';
     ELSE
         INSERT INTO EMP_SHIFT
-        VALUES (cur_shift_num, emp_id, workdate, br_id);
+        VALUES (cur_shift_num, emp_id, workdate, cur_br_id);
 	END IF;
 END//
 DELIMITER ;
@@ -138,10 +147,10 @@ BEGIN
     SET @promo_count = 0;
     SET @promo_count = (SELECT COUNT(*) FROM PROMOTION WHERE new_promo_id = promo_id);
     IF @promo_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Promotion ID must be unique';
     ELSEIF start_date > end_date THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! Please recheck your input';
     ELSE
         INSERT INTO PROMOTION
@@ -246,4 +255,138 @@ BEGIN
 	END IF;
 END//
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS update_table;
+
+DELIMITER //
+# This procedure can update any table with any condition
+# List of parameter:
+# tablename : name of the update table
+# set_value : the column and value that desires to update, deli = comma (',')
+# cond      : condition of update, which included in WHERE clause
+CREATE PROCEDURE update_table (
+    tablename       VARCHAR(100),    
+    set_value       VARCHAR(100),
+    cond	        VARCHAR(100))
+BEGIN
+    SET SQL_SAFE_UPDATES = 0;
+    IF cond = '' OR cond = ' ' THEN
+        SET @up = CONCAT(" UPDATE ", tablename,
+                         " SET ", set_value);
+        PREPARE run_update FROM @up;
+        EXECUTE run_update;
+    ELSE
+        SET @up = CONCAT(" UPDATE ", tablename,        
+                         " SET ", set_value,
+                         " WHERE ", cond);
+        PREPARE run_update FROM @up;
+        EXECUTE run_update;
+	END IF;
+    SET SQL_SAFE_UPDATES = 1;
+END//
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS update_employee_bankacc;
+
+DELIMITER //
+CREATE PROCEDURE update_employee_bankacc (
+    cur_emp_id      INT,    
+    new_bank_acc    VARCHAR(16))
+BEGIN
+    SET @e_count = 0;
+    SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
+    IF @e_count = 0 THEN
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input.';
+    ELSE
+        UPDATE EMPLOYEE
+        SET b_account = new_bank_acc
+        WHERE emp_id = cur_emp_id;
+    END IF;
+END//
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS update_employee_salary_rate;
+
+DELIMITER //
+CREATE PROCEDURE update_employee_salary_rate (
+    cur_emp_id          INT,    
+    new_salary_rate     FLOAT)
+BEGIN
+    SET @e_count = 0;
+    SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
+    IF @e_count = 0 THEN
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input.';
+    ELSE
+        UPDATE EMPLOYEE
+        SET salary_rate = new_salary_rate
+        WHERE emp_id = cur_emp_id;
+    END IF;
+END//
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS update_employee_workhour;
+
+DELIMITER //
+CREATE PROCEDURE update_employee_workhour (
+    cur_emp_id          INT,    
+    new_workhour        INT)
+BEGIN
+    SET @e_count = 0;
+    SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
+    IF @e_count = 0 THEN
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input.';
+    ELSE
+        UPDATE EMPLOYEE
+        SET work_hour = new_workhour
+        WHERE emp_id = cur_emp_id;
+    END IF;
+END//
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS update_employee_salary_rate;
+
+DELIMITER //
+CREATE PROCEDURE update_employee_salary_rate (
+    cur_emp_id             INT,    
+    new_position           VARCHAR(20))
+BEGIN
+    SET @e_count = 0;
+    SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
+    IF @e_count = 0 THEN
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input.';
+    ELSE
+        UPDATE EMPLOYEE
+        SET position = new_position
+        WHERE emp_id = cur_emp_id;
+    END IF;
+END//
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS update_employee_branch;
+
+DELIMITER //
+CREATE PROCEDURE update_employee_branch(
+    cur_emp_id             INT,    
+    new_br_id              VARCHAR(20))
+BEGIN
+    SET @e_count = 0;
+    SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
+    SET @e_count = 0;
+    SET @e_count = (SELECT COUNT(*) FROM BRANCH WHERE br_id = new_br_id);
+    IF @e_count = 0 THEN
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = 'Undeclared value! Please recheck your input.';
+    ELSE
+        UPDATE EMPLOYEE
+        SET br_id = new_br_id
+        WHERE emp_id = cur_emp_id;
+    END IF;
+END//
+DELIMITER ;
+
 
