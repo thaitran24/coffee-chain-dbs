@@ -1,3 +1,4 @@
+USE coffee_db;
 CALL insert_product("P00000","Ca Phe Sua Da","coffee","https://minio.thecoffeehouse.com/image/admin/1639377738_ca-phe-sua-da_400x400.jpg");
 CALL insert_product("P00001","Ca Phe Sua Nong","coffee","https://minio.thecoffeehouse.com/image/admin/1639377770_cfsua-nong_400x400.jpg");
 CALL insert_product("P00002","Bac Siu","coffee","https://minio.thecoffeehouse.com/image/admin/1639377904_bac-siu_400x400.jpg");
