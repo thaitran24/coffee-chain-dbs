@@ -1,0 +1,20 @@
+Ca Phe Sua Da,coffee,https://minio.thecoffeehouse.com/image/admin/1639377738_ca-phe-sua-da_400x400.jpg,S 39000,M 45000,L 49000
+Ca Phe Sua Nong,coffee,https://minio.thecoffeehouse.com/image/admin/1639377770_cfsua-nong_400x400.jpg,S 35000
+Bac Siu,coffee,https://minio.thecoffeehouse.com/image/admin/1639377904_bac-siu_400x400.jpg,S 29000,M 35000,L 39000
+Bac Siu Nong,coffee,https://minio.thecoffeehouse.com/image/admin/1639377926_bacsiunong_400x400.jpg,S 35000
+Ca Phe Den Da,coffee,https://minio.thecoffeehouse.com/image/admin/1639377798_ca-phe-den-da_400x400.jpg,S 35000,M 41000,L 45000
+Ca Phe Den Nong,coffee,https://minio.thecoffeehouse.com/image/admin/1639377816_ca-phe-den-nong_400x400.jpg
+Caramel Macchiato Da,coffee,https://minio.thecoffeehouse.com/image/admin/caramel-macchiato_143623_400x400.jpg
+Caramel Macchiato Nong,coffee,https://minio.thecoffeehouse.com/image/admin/caramelmacchiatonong_168039_400x400.jpg
+Latte Da,coffee,https://minio.thecoffeehouse.com/image/admin/latte-da_438410_400x400.jpg
+Latte Nong,coffee,https://minio.thecoffeehouse.com/image/admin/latte_851143_400x400.jpg
+Americano Da,coffee,https://minio.thecoffeehouse.com/image/admin/classic-cold-brew_791256_400x400.jpg
+Ameriacano Nong,coffee,https://minio.thecoffeehouse.com/image/admin/1636647328_arme-nong_400x400.jpg
+Cappuccino Da,coffee,https://minio.thecoffeehouse.com/image/admin/Capu-da_487470_400x400.jpg
+Cappuccino Nong,coffee,https://minio.thecoffeehouse.com/image/admin/cappuccino_621532_400x400.jpg
+Espresso Da,coffee,https://minio.thecoffeehouse.com/image/admin/cfdenda-espressoDa_185438_400x400.jpg
+Espresso Nong,coffee,https://minio.thecoffeehouse.com/image/admin/espressoNong_612688_400x400.jpg
+Mocha Da,coffee,https://minio.thecoffeehouse.com/image/admin/mocha-da_538820_400x400.jpg
+Mocha Nong,coffee,https://minio.thecoffeehouse.com/image/admin/mochanong_433980_400x400.jpg
+Cold Brew Truyen Thong,coffee,https://minio.thecoffeehouse.com/image/admin/classic-cold-brew_239501_400x400.jpg
+Cold Brew Sua Tuoi,coffee,https://minio.thecoffeehouse.com/image/admin/cold-brew-sua-tuoi_379576_400x400.jpg

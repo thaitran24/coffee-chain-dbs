@@ -3,3 +3,4 @@ config.txt
 *.exe
 vscode
 data.txt
+query.sql
