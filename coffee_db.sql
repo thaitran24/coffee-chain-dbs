@@ -5,7 +5,7 @@ USE coffee_db;
 DROP TABLE IF EXISTS BRANCH;
 CREATE TABLE BRANCH (
 	br_id		CHAR(6) 			PRIMARY KEY,
-    mng_id		CHAR(6)				NOT NULL, 	DEFAULT 'E00000',
+    mng_id		CHAR(6)				NOT NULL 	DEFAULT 'E00000',
     address		VARCHAR(100)		NOT NULL	DEFAULT ''
 );
 
@@ -27,7 +27,7 @@ CREATE TABLE EMPLOYEE (
 	fname		VARCHAR(10)	NOT NULL,
     lname		VARCHAR(20)	NOT NULL,
     emp_id		CHAR(6)		PRIMARY KEY,
-    br_id		CHAR(6)		NOT NULL, DEFAULT 'B00000', 
+    br_id		CHAR(6)		NOT NULL DEFAULT 'B00000', 
     bdate		DATE		NOT NULL,
     address		VARCHAR(100)NOT NULL	DEFAULT '',
     sex			CHAR(1)		NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE EMPLOYEE (
     b_account	VARCHAR(16),
     salary_rate FLOAT		NOT NULL,	# need DEFAULT
     phone_num	CHAR(10)	NOT NULL,
-    work_hour	INT			NOT NULL,	DEFAULT 0, # reset after a month
+    work_hour	INT			NOT NULL	DEFAULT 0, # reset after a month
     gmail		VARCHAR(40)	NOT NULL,
     degree		VARCHAR(40),
     position	VARCHAR(20),
@@ -107,7 +107,7 @@ DROP TABLE IF EXISTS M_BATCH;
 CREATE TABLE M_BATCH (	# lo nguyen lieu
 	ba_id		CHAR(6)	PRIMARY KEY,
     m_id		CHAR(6)	NOT NULL,	
-    mng_id		CHAR(6)	NOT NULL,	DEFAULT 'E00000',
+    mng_id		CHAR(6)	NOT NULL	DEFAULT 'E00000',
     imp_date	DATE	NOT NULL,
     exp_date	DATE	NOT NULL,
     quantity	FLOAT	NOT NULL,
