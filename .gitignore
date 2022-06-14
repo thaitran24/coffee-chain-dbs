@@ -1,6 +1,9 @@
-generate.cpp
+cpp
 config.txt
 *.exe
-vscode
+.vscode
 data.txt
 query.sql
+test.xlsx
+Person
+Makefile
