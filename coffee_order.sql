@@ -110,15 +110,16 @@ BEGIN
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
-    IF (SELECT * FROM PRODUCT_ORDER WHERE pr_id = add_prod_id AND order_id = add_order_id AND add_size = size) = NULL THEN
-		INSERT INTO PRODUCT_ORDER VALUES(add_prod_id, add_order_id, add_size, add_price, add_quantity, DEFAULT);
+    IF (SELECT * FROM PRODUCT_ORDER WHERE pr_id = add_prod_id AND order_id = add_order_id) = NULL THEN
+		INSERT INTO PRODUCT_ORDER VALUES(add_prod_id, add_order_id);
+		INSERT INTO PRODUCT_ORDER_DETAIL VALUES(add_prod_id, add_order_id, add_size, add_price, add_quantity);
 	ELSE 
-		UPDATE 	PRODUCT_ORDER
-        SET	   	PRODUCT_ORDER.price = add_price,
-                PRODUCT_ORDER.quantity = add_quantity
-		WHERE	PRODUCT_ORDER.pr_id = add_prod_id 
-				AND PRODUCT_ORDER.order_id = add_order_id
-				AND	PRODUCT_ORDER.size = add_size;
+		UPDATE 	PRODUCT_ORDER_DETAIL
+        SET	   	PRODUCT_ORDER_DETAIL.price = add_price,
+                PRODUCT_ORDER_DETAIL.quantity = add_quantity
+		WHERE	PRODUCT_ORDER_DETAIL.pr_id = add_prod_id 
+				AND PRODUCT_ORDER_DETAIL.order_id = add_order_id
+				AND	PRODUCT_ORDER_DETAIL.size = add_size;
 	END IF;
 END $$
 DELIMITER ;
@@ -326,13 +327,13 @@ DELIMITER ;
 
 DROP TRIGGER IF EXISTS trig_update_total_money;
 DELIMITER $$
-CREATE TRIGGER trig_update_total_money AFTER UPDATE ON PRODUCT_ORDER
+CREATE TRIGGER trig_update_total_money AFTER INSERT ON PRODUCT_ORDER_DETAIL
 FOR EACH ROW
 BEGIN
 	DECLARE up_promo_id INT DEFAULT 0;
     UPDATE PR_ORDER 
-    SET PR_ORDER.total = (SELECT SUM(PRODUCT_ORDER.price * PRODUCT_ORDER.quantity)
-						  WHERE PRODUCT_ORDER.order_id = NEW.order_id)
+    SET PR_ORDER.total = (SELECT SUM(PRODUCT_ORDER_DETAIL.price * PRODUCT_ORDER_DETAIL.quantity)
+						  WHERE PRODUCT_ORDER_DETAIL.order_id = NEW.order_id)
 	WHERE PR_ORDER.order_id = NEW.order_id;
     
     SET up_promo_id = (SELECT promo_id FROM PR_ORDER WHERE PR_ORDER.promo_id = up_promo_id);
@@ -386,55 +387,13 @@ END $$
 DELIMITER ;
 
 
-# procedure for insert gift products
-DROP PROCEDURE IF EXISTS proc_insert_gift_product;
-DELIMITER $$
-CREATE PROCEDURE proc_insert_gift_product (
-	add_order_id	INT,
-    gift_pr_id		INT,
-    add_size		CHAR(1),
-    add_quantity	INT
-)
-BEGIN
-	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = add_order_id) = NULL THEN
-		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(add_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = @error_msg;
-	END IF;
-    
-    IF (SELECT pr_id FROM PRODUCT WHERE PRODUCT.pr_id = gift_order_id) = NULL THEN
-		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(add_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = @error_msg;
-	END IF;
-    
-    IF gift_pr_id NOT IN (SELECT pr_id FROM PRODUCT_GIFT) THEN
-		SET @error_msg = CONCAT('Product ID: ', CAST(gift_pr_id as CHAR), ' not in gift products');
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = @error_msg;
-	END IF;
-    
-    IF (SELECT * FROM PRODUCT_ORDER WHERE pr_id = gift_pr_id AND order_id = add_order_id AND add_size = size) = NULL THEN
-		INSERT INTO PRODUCT_ORDER VALUES(gift_pr_id, add_order_id, add_size, 0, add_quantity, DEFAULT);
-	ELSE 
-		UPDATE 	PRODUCT_ORDER
-        SET	   	PRODUCT_ORDER.price = add_price,
-                PRODUCT_ORDER.quantity = add_quantity
-		WHERE	PRODUCT_ORDER.pr_id = gift_pr_id 
-				AND PRODUCT_ORDER.order_id = add_order_id
-				AND	PRODUCT_ORDER.size = add_size;
-	END IF;
-END $$
-DELIMITER ;
-
-
 # procedure for deleting a product in an order
 DROP PROCEDURE IF EXISTS proc_delete_product_order;
 DELIMITER $$
 CREATE PROCEDURE proc_delete_product_order (
-	del_order_id	INT,
-    del_pr_id		INT,
-    del_size		CHAR(1)
+	del_order_id	CHAR(6),
+    del_pr_id		CHAR(6),
+	del_size		CHAR(1)
 )
 BEGIN
 	IF (SELECT order_id FROM PR_ORDER WHERE del_order_id = order_id) = NULL THEN
@@ -449,10 +408,16 @@ BEGIN
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
-	DELETE FROM PRODUCT_ORDER
-    WHERE 	PRODUCT_ORDER.pr_id = del_order_id 
-			AND PRODUCT_ORDER.order_id = del_order_id
-			AND	PRODUCT_ORDER.size = del_size;
+	DELETE FROM PRODUCT_ORDER_DETAIL
+    WHERE 	PRODUCT_ORDER_DETAIL.pr_id = del_order_id 
+			AND PRODUCT_ORDER_DETAIL.order_id = del_order_id
+			AND	PRODUCT_ORDER_DETAIL.size = del_size;
+    
+	IF (SELECT pr_id FROM PRODUCT_ORDER_DETAIL WHERE PRODUCT_ORDER_DETAIL.pr_id = del_order_id) THEN
+		DELETE FROM PRODUCT_ORDER
+		WHERE 	PRODUCT_ORDER.pr_id = del_order_id 
+				AND PRODUCT_ORDER.order_id = del_order_id;
+	END IF;
     
 END $$
 DELIMITER ;
