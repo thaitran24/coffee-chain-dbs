@@ -250,10 +250,7 @@ DROP TABLE IF EXISTS PRODUCT_ORDER;
 CREATE TABLE  PRODUCT_ORDER (
 	pr_id		CHAR(6) NOT NULL,
     order_id	CHAR(10)NOT NULL,
-    size		CHAR(1)	NOT NULL,
-    PRIMARY KEY (pr_id, order_id, size),
-    price		INT		NOT NULL,
-    quantity 	INT		NOT NULL,
+	PRIMARY KEY (pr_id, order_id),
     CONSTRAINT	fk_product_order
 				FOREIGN KEY (pr_id)
                 REFERENCES PRODUCT(pr_id)
@@ -261,6 +258,24 @@ CREATE TABLE  PRODUCT_ORDER (
 	CONSTRAINT	fk_order_product
 				FOREIGN KEY (order_id)
                 REFERENCES PR_ORDER(order_id)
+                ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+DROP TABLE IF EXISTS PRODUCT_ORDER_DETAIL; # so luong san pham thuoc cac co khac nhau tuong ung voi mot san pham
+CREATE TABLE  PRODUCT_ORDER_DETAIL (
+	pr_id		CHAR(6) NOT NULL,
+    order_id	CHAR(10)NOT NULL,
+    size		CHAR(1)	NOT NULL,
+    price		INT		NOT NULL,
+    quantity 	INT		NOT NULL,
+	PRIMARY KEY (pr_id, order_id, size, price, quantity),
+    CONSTRAINT	fk_product_order_detail
+				FOREIGN KEY (pr_id)
+                REFERENCES PRODUCT_ORDER(pr_id)
+                ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT	fk_order_product_detail
+				FOREIGN KEY (order_id)
+                REFERENCES PRODUCT_ORDER(order_id)
                 ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
