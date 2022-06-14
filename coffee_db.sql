@@ -33,13 +33,18 @@ CREATE TABLE EMPLOYEE (
     sex			CHAR(1)		NOT NULL,
     startdate	DATE		NOT NULL,
     ssn			CHAR(11)	NOT NULL,
-    b_account	VARCHAR(16),
+    b_account	VARCHAR(19),
     salary_rate FLOAT		NOT NULL,	# need DEFAULT
     phone_num	CHAR(10)	NOT NULL,
     work_hour	INT			NOT NULL	DEFAULT 0, # reset after a month
-    gmail		VARCHAR(40)	NOT NULL,
+    email		VARCHAR(40)	NOT NULL,
     degree		VARCHAR(40),
     position	VARCHAR(20),
+	mng_id		CHAR(6)		DEFAULT	'E00000',
+	CONSTRAINT 	fk_emp_mng
+				FOREIGN KEY (mng_id) 
+				REFERENCES EMPLOYEE(emp_id) 
+				ON DELETE SET DEFAULT ON UPDATE CASCADE,
     CONSTRAINT 	fk_emp_branch
 				FOREIGN KEY (br_id) 
 				REFERENCES BRANCH(br_id) 
@@ -59,10 +64,14 @@ CREATE TABLE SHIFT (	# ca lam viec
     end_time	TIME	NOT NULL
 );
 
+DROP TABLE IF EXISTS WORKDATE;
+CREATE TABLE WORKDATE (	# ca lam viec
+	workdate	DATE	PRIMARY KEY
+);
 
 DROP TABLE IF EXISTS EMP_SHIFT;
 CREATE TABLE EMP_SHIFT (
-	shift_num	CHAR(6)	NOT NULL,
+	shift_num	CHAR(6)	NOT NULL	DEFAULT 'S00000',
 	emp_id		CHAR(6)	NOT NULL,
     workdate	DATE	NOT NULL,
     PRIMARY KEY (shift_num, emp_id, workdate),
@@ -74,7 +83,12 @@ CREATE TABLE EMP_SHIFT (
 	CONSTRAINT 	fk_shift
 				FOREIGN KEY (shift_num) 
 				REFERENCES SHIFT(shift_num) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
+				ON DELETE SET DEFAULT ON UPDATE CASCADE,
+	
+	CONSTRAINT	fk_workdate
+				FOREIGN KEY (workdate)
+				REFERENCES WORKDATE(workdate)
+				ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS PRODUCT;
@@ -90,7 +104,7 @@ CREATE TABLE PR_PRICE (
 	pr_id		CHAR(6)		NOT NULL,
     size		CHAR(1)		NOT NULL,
     price		INT			NOT NULL,
-	PRIMARY KEY(pr_id, size),
+	PRIMARY KEY(pr_id, size, price),
     CONSTRAINT 	fk_product_price
 				FOREIGN KEY (pr_id) 
 				REFERENCES PRODUCT(pr_id) 
@@ -133,7 +147,7 @@ CREATE TABLE PR_MATERIAL (
 	CONSTRAINT 	fk_pr_material
 				FOREIGN KEY (pr_id) 
 				REFERENCES PRODUCT(pr_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
+				ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS CUSTOMER;
@@ -144,7 +158,7 @@ CREATE TABLE CUSTOMER (
     phone_num	CHAR(10)	NOT NULL,
     sex			CHAR(1)		NOT NULL,
     address		VARCHAR(100)NOT NULL	DEFAULT '',
-    gmail		VARCHAR(40) NOT NULL,
+    email		VARCHAR(40) NOT NULL,
     res_date	DATE		NOT NULL,
     acc_point	INT			NOT NULL 	DEFAULT 0
 );
@@ -171,60 +185,9 @@ CREATE TABLE ACCOUNT_INF (
 DROP TABLE IF EXISTS PROMOTION;
 CREATE TABLE PROMOTION (
 	promo_id	CHAR(6)	PRIMARY KEY,
+	promo_per	INT,	# phan tram khuyen mai (40% luu 40),
     start_date	DATE	NOT NULL,
-    end_date	DATE	NOT NULL,
-	promo_type	BOOL	NOT NULL	DEFAULT 0	# 0: KM %, 1: KM mua x tang y
-);
-
-DROP TABLE IF EXISTS PERC_PROMOTION;
-CREATE TABLE PERC_PROMOTION (
-	promo_id	CHAR(6)	PRIMARY KEY,
-    promo_per	INT,	# phan tram khuyen mai (40% luu 40)
-    CONSTRAINT 	fk_perc_promo
-				FOREIGN KEY (promo_id) 
-				REFERENCES PROMOTION(promo_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-DROP TABLE IF EXISTS GIFT_PROMOTION;
-CREATE TABLE GIFT_PROMOTION (
-	promo_id	CHAR(6)	PRIMARY KEY,
-    buy_num		INT,	# so luong mua
-	gift_num	INT,	# so luong tang
-    CONSTRAINT 	fk_num_promo
-				FOREIGN KEY (promo_id) 
-				REFERENCES PROMOTION(promo_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-DROP TABLE IF EXISTS PR_APPLY_PROMO;
-CREATE TABLE PR_APPLY_PROMO (	# san pham duoc ap dung khuyen mai
-	promo_id	CHAR(6),
-    pr_id		CHAR(6),
-    PRIMARY KEY (promo_id, pr_id),
-    CONSTRAINT 	fk_apply_promo
-				FOREIGN KEY (promo_id) 
-				REFERENCES PROMOTION(promo_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
-	CONSTRAINT 	fk_apply_product
-				FOREIGN KEY (pr_id) 
-				REFERENCES PRODUCT(pr_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-DROP TABLE IF EXISTS PRODUCT_GIFT;
-CREATE TABLE PRODUCT_GIFT (		# san pham duoc dung de tang
-	promo_id	CHAR(6),
-    pr_id		CHAR(6),
-    PRIMARY KEY (promo_id, pr_id),
-    CONSTRAINT 	fk_gift_promo
-				FOREIGN KEY (promo_id) 
-				REFERENCES GIFT_PROMOTION(promo_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
-	CONSTRAINT 	fk_gift_product
-				FOREIGN KEY (pr_id) 
-				REFERENCES PRODUCT(pr_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
+    end_date	DATE	NOT NULL
 );
 
 DROP TABLE IF EXISTS PR_ORDER;
@@ -291,7 +254,6 @@ CREATE TABLE  PRODUCT_ORDER (
     PRIMARY KEY (pr_id, order_id, size),
     price		INT		NOT NULL,
     quantity 	INT		NOT NULL,
-    is_gift		BOOL	DEFAULT FALSE,
     CONSTRAINT	fk_product_order
 				FOREIGN KEY (pr_id)
                 REFERENCES PRODUCT(pr_id)
