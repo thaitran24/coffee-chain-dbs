@@ -13,38 +13,39 @@ CREATE PROCEDURE insert_employee (
     sex         CHAR(1),
     startdate   DATE, 
     ssn         CHAR(11), 
-    b_account   VARCHAR(16), 
+    b_account   VARCHAR(19), 
     salary_rate FLOAT, 
     phone_num   CHAR(10), 
     work_hour   INT,
-    gmail       VARCHAR(40),
+    email       VARCHAR(40),
     degree      VARCHAR(40),
-    position    VARCHAR(20))
+    position    VARCHAR(20),
+    mng_id      CHAR(6))
 BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = new_emp_id);
     SET @br_count = 0;
     SET @br_count = (SELECT COUNT(*) FROM BRANCH WHERE br_id = cur_br_id);
     IF @e_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Employee ID must be unique.';
     ELSEIF sex <> 'M' AND sex <> 'F' AND
-    gmail NOT REGEXP '^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9._-]@[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]\\.[a-zA-Z]{2,63}$' AND
+    email NOT REGEXP '^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9._-]@[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]\\.[a-zA-Z]{2,63}$' AND
     length(phone_num) != 10 AND 
     phone_num NOT REGEXP '0[0-9]+'
     THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid value! Please input the correct format of contact.';
-    ELSEIF @br_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+    ELSEIF @br_count = 0  AND  THEN
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Branch ID not available';
     ELSEIF (YEAR(CURDATE) - YEAR(bdate)) < 18 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid value! Employee age must be 18 or older.';
     ELSE        
         INSERT INTO EMPLOYEE
         VALUES (fname, lname, new_emp_id, cur_br_id, bdate, address, sex, startdate, ssn, 
-                b_account, salary_rate, phone_num, work_hour, gmail, degree, position);
+                b_account, salary_rate, phone_num, work_hour, email, degree, position);
 	END IF;
 END//
 DELIMITER ;
@@ -60,14 +61,32 @@ BEGIN
     SET @s_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = new_shift_num);
     IF @s_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Shift ID must be unique.';
     ELSEIF start_time > end_time THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! End time can not be before start time.';
     ELSE
         INSERT INTO SHIFT
         VALUES (new_shift_num, start_time, end_time);
+	END IF;
+END//
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS insert_workdate;
+
+DELIMITER //
+CREATE PROCEDURE insert_workdate (
+    new_workdate    TIME)
+BEGIN
+    SET @w_count = 0;
+    SET @w_count = (SELECT COUNT(*) FROM WORKDATE WHERE workdate = new_workdate);
+    IF @s_count <> 0 THEN
+        SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Duplicate found! Workdate has already been inserted.';
+    ELSE
+        INSERT INTO WORKDATE
+        VALUES (new_workdate);
 	END IF;
 END//
 DELIMITER ;
@@ -78,18 +97,29 @@ DELIMITER //
 CREATE PROCEDURE insert_emp_shift (
     cur_shift_num	CHAR(6),
 	cur_emp_id		CHAR(6),
-    workdate	    DATE)
+    cur_workdate	    DATE)
 BEGIN
     SET @s_count = 0;
     SET @e_count = 0;
     SET @br_count = 0;
+    SET @w_count = 0;
+    SET @k_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = cur_shift_num);
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     SET @br_count = (SELECT br_id FROM EMPLOYEE WHERE emp_id = cur_emp_id);
+    SET @w_count = (SELECT COUNT(*) FROM WORKDATE WHERE workdate = cur_workdate);
+    SET @k_count = (SELECT COUNT(*) FROM EMP_SHIFT WHERE workdate = cur_workdate AND emp_id = cur_emp_id AND shift_num = cur_shift_num);
     IF @s_count = 0 OR @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Shift and Employee must be available.';
+    ELSEIF @k_count <> 0 THEN
+        SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Redeclared value! This shift for employee in that day has been set.';
     ELSE
+        IF @w_count = 0 THEN
+            INSERT INTO WORKDATE
+            VALUES (cur_workdate)
+        END IF;
         INSERT INTO EMP_SHIFT
         VALUES (cur_shift_num, emp_id, workdate, @br_count);
 	END IF;
@@ -108,7 +138,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = new_pr_id);
     IF @pr_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Product ID must be unique';
     ELSE
         INSERT INTO PRODUCT
@@ -130,38 +160,14 @@ BEGIN
     SET @price_count = 0;
     SET @price_count = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSEIF @price_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Product ID has already had its price';
     ELSE
         INSERT INTO PR_PRICE
         VALUES (cur_pr_id, cur_size, price);
-	END IF;
-END//
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS insert_promotion;
-
-DELIMITER //
-CREATE PROCEDURE insert_promotion (
-    new_promo_id	CHAR(6),
-	start_date      DATE,
-    end_date        DATE,
-    promo_type	    BOOL)
-BEGIN
-    SET @promo_count = 0;
-    SET @promo_count = (SELECT COUNT(*) FROM PROMOTION WHERE promo_id = new_promo_id);
-    IF @promo_count <> 0 THEN
-        SIGNAL SQLSTATE '45000'
-			SET MESSAGE_TEXT = 'Duplicate found! Promotion ID must be unique';
-    ELSEIF start_date > end_date THEN
-        SIGNAL SQLSTATE '45000'
-			SET MESSAGE_TEXT = 'Invalid Daytime! End date can not be before start day.';
-    ELSE
-        INSERT INTO PROMOTION
-        VALUES (new_promo_id, start_date, end_date, promo_type);
 	END IF;
 END//
 DELIMITER ;
@@ -178,88 +184,17 @@ BEGIN
     SET @promo_count = 0;
     SET @promo_count = (SELECT COUNT(*) FROM PERC_PROMOTION WHERE promo_id = new_promo_id);
     IF @promo_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Promotion ID must be unique.';
     ELSEIF start_date > end_date THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! End date can not be before start day.';
     ELSE
-        CALL insert_promotion(new_promo_id, start_date, end_date, 0);
         INSERT INTO PERC_PROMOTION
-        VALUES (new_promo_id, promo_per);
+        VALUES (new_promo_id, promo_per, start_date, end_date);
 	END IF;
 END//
 DELIMITER ;
-
-DROP PROCEDURE IF EXISTS insert_gift_promo;
-
-DELIMITER //
-CREATE PROCEDURE insert_gift_promo (
-    new_promo_id	CHAR(6),
-    buy_num	        INT,
-	gift_num		INT,
-    start_date      INT,
-    end_date        INT)
-BEGIN
-    SET @promo_count = 0;
-    SET @promo_count = (SELECT COUNT(*) FROM GIFT_PROMOTION WHERE promo_id = new_promo_id);
-    IF @promo_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = 'Duplicate found! Promotion ID must be unique';
-    ELSEIF start_date > end_date THEN
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = 'Invalid Daytime! End date can not be before start day.';
-    ELSE
-        CALL insert_promotion(new_promo_id, start_date, end_date, 1);
-        INSERT INTO GIFT_PROMOTION
-        VALUES (new_promo_id, buy_num, gift_num);
-	END IF;
-END//
-DELIMITER ;
-
-
-DROP PROCEDURE IF EXISTS insert_pr_apply_promo;
-
-DELIMITER //
-CREATE PROCEDURE insert_pr_apply_promo (
-    cur_promo_id	CHAR(6),
-    cur_pr_id	    CHAR(6))
-BEGIN
-    SET @promo_count = 0;
-    SET @pr_count = 0;
-    SET @promo_count = (SELECT COUNT(*) FROM GIFT_PROMOTION WHERE promo_id = cur_promo_id);
-    SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
-    IF @promo_count = 0 OR pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = 'Undeclared value! Promotion ID and Product ID must be available.';
-    ELSE
-        INSERT INTO PR_APPLY_PROMO
-        VALUES (cur_promo_id, cur_pr_id);
-	END IF;
-END//
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS insert_pr_gift;
-
-DELIMITER //
-CREATE PROCEDURE insert_pr_gift (
-    cur_promo_id	CHAR(6),
-    cur_pr_id	    CHAR(6))
-BEGIN
-    SET @promo_count = 0;
-    SET @pr_count = 0;
-    SET @promo_count = (SELECT COUNT(*) FROM GIFT_PROMOTION WHERE promo_id = cur_promo_id);
-    SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
-    IF @promo_count = 0 OR pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
-			SET MESSAGE_TEXT = 'Undeclared value! Promotion ID and Product ID must be available.';
-    ELSE
-        INSERT INTO PRODUCT_GIFT
-        VALUES (cur_promo_id, cur_pr_id);
-	END IF;
-END//
-DELIMITER ;
-
 
 DROP PROCEDURE IF EXISTS update_table;
 
@@ -301,7 +236,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -321,7 +256,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -341,7 +276,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -361,7 +296,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -383,7 +318,7 @@ BEGIN
     SET @br_count = 0;
     SET @br_count = (SELECT COUNT(*) FROM BRANCH WHERE br_id = new_br_id);
     IF @e_count = 0 OR @br_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -404,10 +339,10 @@ BEGIN
     SET @s_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = cur_shift_num);
     IF @s_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSEIF new_start_time > new_end_time THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! End time can not be before start time.';
     ELSE
         UPDATE SHIFT
@@ -429,7 +364,7 @@ BEGIN
     SET @s_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = new_shift_num);
     IF @s_count = 0 OR @e_count THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMP_SHIFT
@@ -449,7 +384,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT
@@ -469,7 +404,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT
@@ -489,7 +424,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT
@@ -510,7 +445,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT

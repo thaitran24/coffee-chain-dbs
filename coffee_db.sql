@@ -287,9 +287,8 @@ CREATE TABLE DELI_SERVICE (	#
 
 DROP TABLE IF EXISTS DELIVERY;
 CREATE TABLE DELIVERY (
-	order_id		CHAR(10),
+	order_id		CHAR(10)	PRIMARY KEY,
     deli_ser_id		CHAR(6),
-    PRIMARY KEY (order_id, deli_ser_id),
     vehicle		VARCHAR(20),
     driver		VARCHAR(20),
     deli_date	DATE,
