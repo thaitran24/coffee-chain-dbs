@@ -12,7 +12,7 @@ CREATE TABLE BRANCH (
 DROP TABLE IF EXISTS FURNITURE;
 CREATE TABLE FURNITURE (
     fur_id		CHAR(6),
-    br_id		CHAR(6)		DEFAULT 'B00000',
+    br_id		CHAR(6)		DEFAULT 'BR0000',
     PRIMARY KEY (fur_id, br_id),
     furname		VARCHAR(20),
     quantity	INT,
@@ -27,7 +27,7 @@ CREATE TABLE EMPLOYEE (
 	fname		VARCHAR(10)	NOT NULL,
     lname		VARCHAR(20)	NOT NULL,
     emp_id		CHAR(6)		PRIMARY KEY,
-    br_id		CHAR(6)		NOT NULL DEFAULT 'B00000', 
+    br_id		CHAR(6)		NOT NULL DEFAULT 'BR0000', 
     bdate		DATE		NOT NULL,
     address		VARCHAR(100)NOT NULL	DEFAULT '',
     sex			CHAR(1)		NOT NULL,
@@ -200,7 +200,7 @@ CREATE TABLE PR_ORDER (	# don hang
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
     rec_address	VARCHAR(100)		DEFAULT '',		# noi nhan hang
     promo_id	CHAR(6)					DEFAULT 0,
-    br_id		CHAR(6)	NOT NULL	DEFAULT 'B00000',
+    br_id		CHAR(6)	NOT NULL	DEFAULT 'BR0000',
     cus_id		CHAR(6)	NOT NULL,
     emp_id		CHAR(6)	NOT NULL	DEFAULT 'E00000',
     stat		BOOL	NOT NULL,	# 0: chua thanh toan, 1: da thanh toan
@@ -229,7 +229,7 @@ CREATE TABLE RECEIPT (
     pay_day		DATE	NOT NULL,
     pay_time	TIME	NOT NULL,
     promo_red	INT, 	# khuyen mai quy doi
-    br_id		CHAR(6)	NOT NULL	DEFAULT 'B00000',
+    br_id		CHAR(6)	NOT NULL	DEFAULT 'BR0000',
     cus_id		CHAR(6)	NOT NULL,
     total		INT		NOT NULL,
     CONSTRAINT 	fk_branch_receipt

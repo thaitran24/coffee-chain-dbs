@@ -415,7 +415,7 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS Insert_Customer;
 DELIMITER //
 CREATE PROCEDURE Insert_Customer
-(first_name VARCHAR(10), last_name VARCHAR(20), id CHAR(6), phone_number CHAR(10), s CHAR(1), add_number INT, mail VARCHAR(40), reg_date DATE)
+(first_name VARCHAR(10), last_name VARCHAR(20), id CHAR(6), phone_number CHAR(10), s CHAR(1), address VARCHAR(100), mail VARCHAR(40), reg_date DATE)
 BEGIN
 	DECLARE c_count INT DEFAULT 0;
 
@@ -443,7 +443,7 @@ BEGIN
     END IF;
     
 	INSERT INTO CUSTOMER
-    VALUES(first_name, last_name, id, phone_number, s, add_number, mail, reg_date); 
+    VALUES(first_name, last_name, id, phone_number, s, address, mail, reg_date,DEFAULT); 
 END//
 
 
