@@ -11,7 +11,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         DELETE FROM PR_PRICE
@@ -36,7 +36,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         DELETE FROM EMPLOYEE
@@ -57,7 +57,7 @@ BEGIN
     SET @k_count = 0;
     SET @k_count = (SELECT COUNT(*) FROM EMP_SHIFT WHERE emp_id = cur_emp_id AND shift_num = cur_shift_num AND workdate = cur_workdate);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee Shift with this workdate not available.';
     ELSE
         DELETE FROM EMP_SHIFT
@@ -76,7 +76,7 @@ BEGIN
     SET @promo_count = 0;
     SET @promo_count = (SELECT COUNT(*) FROM PROMOTION WHERE promo_id = cur_promo_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Promotion ID not available.';
     ELSE
         DELETE FROM PROMOTION
@@ -96,13 +96,13 @@ CREATE PROCEDURE proc_delete_product_order (
 BEGIN
 	IF (SELECT order_id FROM PR_ORDER WHERE del_order_id = order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(del_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF (SELECT pr_id FROM PRODUCT_ORDER WHERE del_pr_id = pr_id AND order_id = del_order_id AND del_size = size) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing product ID: ', CAST(del_order_id as CHAR), ' with size ', del_size);
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -129,7 +129,7 @@ CREATE PROCEDURE proc_del_receipt (
 BEGIN
 	IF (SELECT rec_id FROM RECEIPT WHERE rec_id = del_rec_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing receipt ID: ', CAST(del_rec_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     DELETE FROM RECEIPT WHERE rec_id = del_rec_id;
@@ -146,7 +146,7 @@ CREATE PROCEDURE proc_del_order (
 BEGIN
 	IF (SELECT order_id FROM PR_ORDER WHERE order_id = del_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(del_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     

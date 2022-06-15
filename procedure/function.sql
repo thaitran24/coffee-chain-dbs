@@ -97,13 +97,13 @@ BEGIN
     
     IF cus_point = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing customer ID: ', CAST(mem_id as CHAR));
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
             RETURN 0;
 	ELSE 
 		SET @error_msg = CONCAT('Customer ID: ', CAST(mem_id as CHAR), ' do not have enough points');
 		IF cus_point < redem_point THEN
-			SIGNAL SQLSTATE '01000'
+			SIGNAL SQLSTATE '45000'
 				SET MESSAGE_TEXT = @error_msg;
 				RETURN 0;
 		END IF;

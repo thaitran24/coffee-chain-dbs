@@ -8,7 +8,7 @@ FOR EACH ROW
 BEGIN
 	IF NEW.order_id = (SELECT rec_id FROM RECEIPT WHERE RECEIPT.order_id = NEW.order_id) THEN
 		SET @error_msg = CONCAT('Receipt ID: ', CAST(mod_order_id as CHAR), ' has already existed');
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -68,5 +68,29 @@ BEGIN
 		DELETE FROM MATERIAL M
         WHERE M.m_id = old.m_id;
     END IF;
+END//
+delimiter ;
+
+DROP TRIGGER IF EXISTS change_workhour;
+delimiter //
+CREATE TRIGGER change_workhour AFTER INSERT ON EMP_SHIFT FOR EACH ROW
+BEGIN 
+	SET @new_workhour = 0;
+	SELECT work_hour INTO @new_workhour
+	FROM EMPLOYEE
+    WHERE EMPLOYEE.emp_id = new.emp_id;
+    SET @end_time = (SELECT end_time FROM SHIFT WHERE SHIFT.shift_num = new.shift_num);
+    SET @start_time = (SELECT start_time FROM SHIFT WHERE SHIFT.shift_num = new.shift_num);
+    IF @end_time IS NULL OR @start_time IS NULL OR @new_workhour IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = "NULL!";
+    END IF;
+    IF DAY(new.workdate) = 1 THEN
+        SET @new_workhour = 0;
+    END IF;
+    SET @new_workhour = (@new_workhour + (HOUR(@end_date) - HOUR(@start_time)));
+    UPDATE EMPLOYEE
+    SET work_hour = @new_workhour
+    WHERE EMPLOYEE.emp_id = new.emp_id;  
 END//
 delimiter ;

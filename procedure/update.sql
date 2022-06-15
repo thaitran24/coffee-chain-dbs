@@ -10,7 +10,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -31,7 +31,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -52,7 +52,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -73,7 +73,7 @@ BEGIN
     SET @e_count = 0;
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = cur_emp_id);
     IF @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -96,7 +96,7 @@ BEGIN
     SET @br_count = 0;
     SET @br_count = (SELECT COUNT(*) FROM BRANCH WHERE br_id = new_br_id);
     IF @e_count = 0 OR @br_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMPLOYEE
@@ -118,10 +118,10 @@ BEGIN
     SET @s_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = cur_shift_num);
     IF @s_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSEIF new_start_time > new_end_time THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! End time can not be before start time.';
     ELSE
         UPDATE SHIFT
@@ -145,7 +145,7 @@ BEGIN
     SET @s_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = new_shift_num);
     IF @s_count = 0 OR @e_count THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Employee ID not available.';
     ELSE
         UPDATE EMP_SHIFT
@@ -166,7 +166,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT
@@ -187,7 +187,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT
@@ -208,7 +208,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = cur_pr_id);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSE
         UPDATE PRODUCT
@@ -230,7 +230,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSEIF new_pr_price < 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -254,7 +254,7 @@ BEGIN
     SET @promo_count = 0;
     SET @promo_count = (SELECT COUNT(*) FROM PROMOTION WHERE promo_id = cur_promo_id);
     IF @promo_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Promotion ID not available.';
     ELSEIF new_perc_val < 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -279,7 +279,7 @@ BEGIN
     SET @promo_count = 0;
     SET @promo_count = (SELECT COUNT(*) FROM PROMOTION WHERE promo_id = cur_promo_id);
     IF @promo_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Promotion ID not available.';
     ELSEIF new_start_day < new_end_day THEN
         SIGNAL SQLSTATE '45000'
@@ -305,13 +305,13 @@ CREATE PROCEDURE proc_update_prod_order (
 BEGIN
     IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = add_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(add_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF (SELECT pr_id FROM PRODUCT WHERE PRODUCT.pr_id = add_prod_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing product ID: ', CAST(add_prod_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -343,20 +343,20 @@ BEGIN
     DECLARE promo_id 	INT	DEFAULT 0;
 	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(mod_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     SET promo_id = (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
     IF promo_id <> 0 AND redem_point <> 0 THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Only apply one type of promotion at a time!';
     END IF;
     
     SET total_money = mod_order.total;
     SET limit_point = total_money * 0.7 / 1000;
     IF limit_point < redem_point THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = "Redemption promotion cannot greater than 70% of Order\'s total money!";
 	END IF;
     
@@ -377,7 +377,7 @@ CREATE PROCEDURE proc_update_receive_address (
 BEGIN
     IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(mod_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     UPDATE PR_ORDER
@@ -399,13 +399,13 @@ BEGIN
     SET order_status = (SELECT stat FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
     IF order_status = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(mod_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF order_status = TRUE THEN
 		SET @error_msg = CONCAT('Order ID: ', CAST(mod_order_id as CHAR), ' had been paid. Cannot change customer ID.');
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -425,7 +425,7 @@ CREATE PROCEDURE proc_set_order_status(
 BEGIN
 	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(mod_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -447,13 +447,13 @@ BEGIN
 	DECLARE promo_red INT DEFAULT 0;
 	IF (SELECT order_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(mod_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     SET promo_red = (SELECT promo_red FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
     IF promo_red <> 0 AND new_promo_id <> 0 THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Only apply one type of promotion at a time.';
 	END IF;
     
@@ -521,7 +521,7 @@ BEGIN
 	END IF;
     
     IF fur_exs = 0 THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Cannot find existing furniture';
 	END IF;
     
@@ -568,13 +568,13 @@ BEGIN
     SET order_status = (SELECT stat FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
 	IF order_status = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(paid_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF order_status = FALSE THEN
 		SET @error_msg = CONCAT('Order ID: ', CAST(paid_order_id as CHAR), ' has not been paid yet');
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -635,13 +635,13 @@ CREATE PROCEDURE proc_delete_product_order (
 BEGIN
 	IF (SELECT order_id FROM PR_ORDER WHERE del_order_id = order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(del_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF (SELECT pr_id FROM PRODUCT_ORDER WHERE del_pr_id = pr_id AND order_id = del_order_id AND del_size = size) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing product ID: ', CAST(del_order_id as CHAR), ' with size ', del_size);
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
@@ -668,7 +668,7 @@ CREATE PROCEDURE proc_del_receipt (
 BEGIN
 	IF (SELECT rec_id FROM RECEIPT WHERE rec_id = del_rec_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing receipt ID: ', CAST(del_rec_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     DELETE FROM RECEIPT WHERE rec_id = del_rec_id;
@@ -685,7 +685,7 @@ CREATE PROCEDURE proc_del_order (
 BEGIN
 	IF (SELECT order_id FROM PR_ORDER WHERE order_id = del_order_id) = NULL THEN
 		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(del_order_id as CHAR));
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     

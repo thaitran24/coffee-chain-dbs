@@ -27,20 +27,20 @@ BEGIN
     SET @e_count = (SELECT COUNT(*) FROM EMPLOYEE WHERE emp_id = new_emp_id);
     SET @cur_br_id = (SELECT br_id FROM EMPLOYEE WHERE emp_id = cur_mng_id);
     IF @e_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Employee ID must be unique.';
     ELSEIF sex <> 'M' AND sex <> 'F' AND
     email NOT REGEXP '^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9._-]@[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]\\.[a-zA-Z]{2,63}$' AND
     length(phone_num) != 10 AND 
     phone_num NOT REGEXP '0[0-9]+'
     THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid value! Please input the correct format of contact.';
     ELSEIF (YEAR(CURDATE()) - YEAR(bdate)) < 18 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid value! Employee age must be 18 or older.';
     ELSEIF @cur_br_id = NULL THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Manager ID not available.';
     ELSE        
 
@@ -63,10 +63,10 @@ BEGIN
     SET @s_count = 0;
     SET @s_count = (SELECT COUNT(*) FROM SHIFT WHERE shift_num = new_shift_num);
     IF @s_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Shift ID must be unique.';
     ELSEIF start_time > end_time THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! End time can not be before start time.';
     ELSE
         INSERT INTO SHIFT
@@ -85,7 +85,7 @@ BEGIN
     SET @w_count = 0;
     SET @w_count = (SELECT COUNT(*) FROM WORKDATE WHERE workdate = new_workdate);
     IF @s_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Workdate has already been inserted.';
     ELSE
         INSERT INTO WORKDATE
@@ -114,18 +114,18 @@ BEGIN
     SET @w_count = (SELECT COUNT(*) FROM WORKDATE WHERE workdate = cur_workdate);
     SET @k_count = (SELECT COUNT(*) FROM EMP_SHIFT WHERE workdate = cur_workdate AND emp_id = cur_emp_id AND shift_num = cur_shift_num);
     IF @s_count = 0 OR @e_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Shift and Employee must be available.';
     ELSEIF @k_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Redeclared value! This shift for employee in that day has been set.';
     ELSE
-        INSERT INTO EMP_SHIFT
-        VALUES (cur_shift_num, emp_id, workdate, @br_count);
         IF @w_count = 0 THEN
             INSERT INTO WORKDATE
             VALUES (cur_workdate);
         END IF;
+        INSERT INTO EMP_SHIFT
+        VALUES (cur_shift_num, cur_emp_id, workdate, @br_count);
 	END IF;
 END//
 DELIMITER ;
@@ -144,7 +144,7 @@ BEGIN
     SET @pr_count = 0;
     SET @pr_count = (SELECT COUNT(*) FROM PRODUCT WHERE pr_id = new_pr_id);
     IF @pr_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Product ID must be unique';
     ELSE
         INSERT INTO PRODUCT
@@ -166,10 +166,10 @@ BEGIN
     SET @price_count = 0;
     SET @price_count = (SELECT COUNT(*) FROM PR_PRICE WHERE pr_id = cur_pr_id AND size = cur_size);
     IF @pr_count = 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
     ELSEIF @price_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Product ID with this size has already had its price';
     ELSEIF price < 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -194,10 +194,10 @@ BEGIN
     SET @promo_count = 0;
     SET @promo_count = (SELECT COUNT(*) FROM PROMOTION WHERE promo_id = new_promo_id);
     IF @promo_count <> 0 THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Duplicate found! Promotion ID must be unique.';
     ELSEIF start_date > end_date THEN
-        SIGNAL SQLSTATE '01000'
+        SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid Daytime! End date can not be before start day.';
     ELSEIF promo_per < 0 THEN
         SIGNAL SQLSTATE '45000'
@@ -234,7 +234,7 @@ BEGIN
 			SET MESSAGE_TEXT = 'The manager ID does not exist';
 	END IF;
     SET @br_check = (SELECT br_id FROM EMPLOYEE WHERE emp_id = imng_id);
-    IF  @br_check <> ibr_id AND @br_check <> "B00000" THEN
+    IF  @br_check <> ibr_id AND @br_check <> "BR0000" THEN
 		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'This employee works at another branch';
 	END IF;
@@ -320,30 +320,30 @@ CREATE PROCEDURE proc_insert_order (
 BEGIN
 	IF order_id IN (SELECT order_id FROM PR_ORDER) THEN
 		SET @error_msg = CONCAT('Order ID: ', CAST(mod_order_id as CHAR), ' has already existed');
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF cus_id NOT IN (SELECT cus_id FROM CUSTOMER) THEN
 		SET @error_msg = CONCAT('Customer ID: ', CAST(cus_id as CHAR), ' do not exist');
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF emp_id NOT IN (SELECT emp_id FROM EMPLOYEE) THEN
 		SET @error_msg = CONCAT('Employee ID: ', CAST(emp_id as CHAR), ' do not exist');
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
     IF br_id NOT IN (SELECT br_id FROM BRANCH) THEN
 		SET @error_msg = CONCAT('Branch ID: ', CAST(br_id as CHAR), ' do not exist');
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = @error_msg;
 	END IF;
     
 	IF (promo_red <> 0 AND promo_id <> 0) THEN
-		SIGNAL SQLSTATE '01000'
+		SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Only apply one type of promotion at a time';
     END IF;
     
