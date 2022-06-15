@@ -12,14 +12,14 @@ CREATE TABLE BRANCH (
 DROP TABLE IF EXISTS FURNITURE;
 CREATE TABLE FURNITURE (
     fur_id		CHAR(6),
-    br_id		CHAR(6),
+    br_id		CHAR(6)		DEFAULT 'B00000',
     PRIMARY KEY (fur_id, br_id),
     furname		VARCHAR(20),
     quantity	INT,
     CONSTRAINT 	fk_branch_furniture
 				FOREIGN KEY (br_id) 
 				REFERENCES BRANCH(br_id)
-                ON DELETE RESTRICT ON UPDATE CASCADE
+                ON DELETE SET DEFAULT ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS EMPLOYEE;
@@ -200,9 +200,9 @@ CREATE TABLE PR_ORDER (	# don hang
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
     rec_address	VARCHAR(100)		DEFAULT '',		# noi nhan hang
     promo_id	CHAR(6)					DEFAULT 0,
-    br_id		CHAR(6)	NOT NULL,
+    br_id		CHAR(6)	NOT NULL	DEFAULT 'B00000',
     cus_id		CHAR(6)	NOT NULL,
-    emp_id		CHAR(6)	NOT NULL,
+    emp_id		CHAR(6)	NOT NULL	DEFAULT 'E00000',
     stat		BOOL	NOT NULL,	# 0: chua thanh toan, 1: da thanh toan
 	CONSTRAINT 	fk_promotion_order
 				FOREIGN KEY (promo_id) 
@@ -215,11 +215,11 @@ CREATE TABLE PR_ORDER (	# don hang
 	CONSTRAINT 	fk_employee_order
 				FOREIGN KEY (emp_id) 
 				REFERENCES EMPLOYEE(emp_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
+				ON DELETE SET DEFAULT ON UPDATE CASCADE,
 	CONSTRAINT 	fk_branch_order
 				FOREIGN KEY (br_id) 
 				REFERENCES BRANCH(br_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE
+				ON DELETE SET DEFAULT ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS RECEIPT;
@@ -229,13 +229,13 @@ CREATE TABLE RECEIPT (
     pay_day		DATE	NOT NULL,
     pay_time	TIME	NOT NULL,
     promo_red	INT, 	# khuyen mai quy doi
-    br_id		CHAR(6)	NOT NULL,
+    br_id		CHAR(6)	NOT NULL	DEFAULT 'B00000',
     cus_id		CHAR(6)	NOT NULL,
     total		INT		NOT NULL,
     CONSTRAINT 	fk_branch_receipt
 				FOREIGN KEY (br_id) 
 				REFERENCES BRANCH(br_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
+				ON DELETE SET DEFAULT ON UPDATE CASCADE,
 	CONSTRAINT 	fk_customer_receipt
 				FOREIGN KEY (cus_id) 
 				REFERENCES CUSTOMER(cus_id) 
@@ -248,13 +248,13 @@ CREATE TABLE RECEIPT (
 
 DROP TABLE IF EXISTS PRODUCT_ORDER;
 CREATE TABLE  PRODUCT_ORDER (
-	pr_id		CHAR(6) NOT NULL,
+	pr_id		CHAR(6) NOT NULL	DEFAULT 'P00000',
     order_id	CHAR(10)NOT NULL,
 	PRIMARY KEY (pr_id, order_id),
     CONSTRAINT	fk_product_order
 				FOREIGN KEY (pr_id)
                 REFERENCES PRODUCT(pr_id)
-                ON DELETE RESTRICT ON UPDATE CASCADE,
+                ON DELETE SET DEFAULT ON UPDATE CASCADE,
 	CONSTRAINT	fk_order_product
 				FOREIGN KEY (order_id)
                 REFERENCES PR_ORDER(order_id)
