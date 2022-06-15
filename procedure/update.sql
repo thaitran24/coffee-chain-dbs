@@ -232,11 +232,11 @@ BEGIN
     IF @pr_count = 0 THEN
         SIGNAL SQLSTATE '01000'
 			SET MESSAGE_TEXT = 'Undeclared value! Product ID not available.';
-    ELSEIF price < 0 THEN
+    ELSEIF new_pr_price < 0 THEN
         SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Invalid value! Price must be a positive value.';
     ELSE
-        UPDATE PRODUCT
+        UPDATE PR_PRICE
         SET price = new_pr_price 
         WHERE pr_id = cur_pr_id AND size = cur_size;
     END IF;
@@ -330,7 +330,7 @@ END //
 DELIMITER ;
 
 
-# update promotion redemption 
+-- update promotion redemption 
 DROP PROCEDURE IF EXISTS proc_update_order_promo_red;
 DELIMITER //
 CREATE PROCEDURE proc_update_order_promo_red (
@@ -367,7 +367,7 @@ END //
 DELIMITER ;
 
 
-# change receive address 
+-- change receive address 
 DROP PROCEDURE IF EXISTS proc_update_receive_address;
 DELIMITER //
 CREATE PROCEDURE proc_update_receive_address (
@@ -387,7 +387,7 @@ END //
 DELIMITER ;
 
 
-# update customer id in order (before paying)
+-- update customer id in order (before paying)
 DROP PROCEDURE IF EXISTS proc_update_cus_id;
 DELIMITER //
 CREATE PROCEDURE proc_update_cus_id (
@@ -436,7 +436,7 @@ END //
 DELIMITER ;
 
 
-# update promotion
+-- update promotion
 DROP PROCEDURE IF EXISTS proc_update_order_promo_id; 
 DELIMITER //
 CREATE PROCEDURE proc_update_order_promo_id (
@@ -555,4 +555,382 @@ BEGIN
 END //
 DELIMITER ;
 
+-- update customer's accumulation points after paying an order
+DROP PROCEDURE IF EXISTS proc_update_cus_acc_points;
+DELIMITER //
+CREATE PROCEDURE proc_update_cus_acc_points(
+	paid_order_id	CHAR(6)
+)
+BEGIN
+	DECLARE order_status BOOL;
+    DECLARE paid_cus_id CHAR(6) DEFAULT 0;
+    DECLARE redem_point INT DEFAULT 0;
+    SET order_status = (SELECT stat FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
+	IF order_status = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(paid_order_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    IF order_status = FALSE THEN
+		SET @error_msg = CONCAT('Order ID: ', CAST(paid_order_id as CHAR), ' has not been paid yet');
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    SET paid_cus_id = (SELECT cus_id FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
+    SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE PR_ORDER.order_id = paid_order_id);
+    UPDATE CUSTOMER
+    SET CUSTOMER.promo_point = CUSTOMER.promo_point - redem_point
+    WHERE CUSTOMER.cus_id = paid_cus_id;
+    
+END //
+DELIMITER ;
 
+-- precedure for update new total money after update promotion redemption
+DROP PROCEDURE IF EXISTS proc_update_total_money_red_promo;
+DELIMITER //
+CREATE PROCEDURE proc_update_total_money_red_promo (
+	mod_order_id	CHAR(6)
+)
+BEGIN
+	DECLARE cus_id	CHAR(6) DEFAULT 0;
+    DECLARE redem_point INT DEFAULT 0;
+    DECLARE promo_money INT DEFAULT 0;    
+	SET cus_id = (SELECT cus_id FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
+	SET redem_point = (SELECT promo_red FROM PR_ORDER WHERE mod_order_id = PR_ORDER.order_id);
+	SET promo_money = func_cal_red_money(cus_id, redem_point);
+	UPDATE PR_ORDER
+	SET PR_ORDER.total = PR_ORDER.total - promo_money
+	WHERE PR_ORDER.order_id = mod_order_id;
+END //
+DELIMITER ;
+
+-- procedure for update new total money after update percentage promotion
+DROP PROCEDURE IF EXISTS proc_update_total_money_perc_promo;
+DELIMITER //
+CREATE PROCEDURE proc_update_total_money_perc_promo (
+	mod_order_id	CHAR(6)
+)
+BEGIN
+	DECLARE mod_promo_id CHAR(6);
+    SET mod_promo_id = (SELECT promo_id FROM PR_ORDER WHERE PR_ORDER.order_id = mod_order_id);
+	IF (SELECT promo_type FROM PROMOTION WHERE PROMOTION.promo_id = mod_promo_id) = FALSE THEN
+		SET @promo_per = (SELECT promo_per FROM PERC_PROMOTION WHERE PERC_PROMOTION.promo_id = mod_promo_id);
+		UPDATE PR_ORDER
+		SET PR_ORDER.total = PR_ORDER.total * @promo_per / 100
+		WHERE PR_ORDER.order_id = mod_order_id;
+	END IF;
+END //
+DELIMITER ;
+
+-- procedure for deleting a product in an order
+DROP PROCEDURE IF EXISTS proc_delete_product_order;
+DELIMITER //
+CREATE PROCEDURE proc_delete_product_order (
+	del_order_id	CHAR(6),
+    del_pr_id		CHAR(6),
+	del_size		CHAR(1)
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE del_order_id = order_id) = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(del_order_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    IF (SELECT pr_id FROM PRODUCT_ORDER WHERE del_pr_id = pr_id AND order_id = del_order_id AND del_size = size) = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing product ID: ', CAST(del_order_id as CHAR), ' with size ', del_size);
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+	DELETE FROM PRODUCT_ORDER_DETAIL
+    WHERE 	PRODUCT_ORDER_DETAIL.pr_id = del_order_id 
+			AND PRODUCT_ORDER_DETAIL.order_id = del_order_id
+			AND	PRODUCT_ORDER_DETAIL.size = del_size;
+    
+	IF (SELECT pr_id FROM PRODUCT_ORDER_DETAIL WHERE PRODUCT_ORDER_DETAIL.pr_id = del_order_id) THEN
+		DELETE FROM PRODUCT_ORDER
+		WHERE 	PRODUCT_ORDER.pr_id = del_order_id 
+				AND PRODUCT_ORDER.order_id = del_order_id;
+	END IF;
+    
+END //
+DELIMITER ;
+
+-- delete a receipt
+DROP PROCEDURE IF EXISTS proc_del_receipt;
+DELIMITER //
+CREATE PROCEDURE proc_del_receipt (
+	del_rec_id		CHAR(6)
+)
+BEGIN
+	IF (SELECT rec_id FROM RECEIPT WHERE rec_id = del_rec_id) = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing receipt ID: ', CAST(del_rec_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    DELETE FROM RECEIPT WHERE rec_id = del_rec_id;
+END //
+DELIMITER ;
+
+
+-- delete an order, also delete corresponding receipt
+DROP PROCEDURE IF EXISTS proc_del_order;
+DELIMITER //
+CREATE PROCEDURE proc_del_order (
+	del_order_id		CHAR(6)
+)
+BEGIN
+	IF (SELECT order_id FROM PR_ORDER WHERE order_id = del_order_id) = NULL THEN
+		SET @error_msg = CONCAT('Cannot find existing order ID: ', CAST(del_order_id as CHAR));
+        SIGNAL SQLSTATE '01000'
+			SET MESSAGE_TEXT = @error_msg;
+	END IF;
+    
+    DELETE FROM RECEIPT WHERE RECEIPT.order_id = del_order_id;
+    DELETE FROM PR_ORDER WHERE order_id = del_order_id;
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS Update_Batch_Manager;
+delimiter //
+CREATE PROCEDURE Update_Batch_Manager
+(b_id CHAR(6), new_mng_id CHAR(6))
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+	DECLARE n_count INT DEFAULT 0;
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	SELECT COUNT(*) INTO n_count FROM EMPLOYEE WHERE emp_id = new_mng_id;
+    -- quan li khong ton tai
+	IF n_count = 0 THEN
+		SET @error_msg = CONCAT('Nguoi quan li voi ID: ',CAST(new_mng_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	UPDATE M_BATCH
+    SET mng_id = new_mng_id
+    WHERE ba_id = b_id;
+END 
+//
+
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Material_ID;
+delimiter //
+CREATE PROCEDURE Update_Batch_Material_ID
+(b_id CHAR(6), new_m_id CHAR(6))
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+    DECLARE old_m_id CHAR(6) DEFAULT 0;
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+    SELECT m_id INTO old_m_id FROM M_BATCH WHERE ba_id = b_id;
+    
+	UPDATE M_BATCH
+    SET m_id = new_m_id
+    WHERE m_id = old_m_id;
+END 
+//
+
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Material_Name;
+delimiter //
+CREATE PROCEDURE Update_Batch_Material_Name
+(b_id CHAR(6), new_m_name VARCHAR(20))
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+    DECLARE old_name VARCHAR(20);
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+    SELECT m_name INTO old_name FROM M_BATCH WHERE ba_id = b_id;
+    
+	UPDATE M_BATCH
+    SET m_name = new_m_name
+    WHERE m_name = old_name;
+END 
+//
+
+
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Import_Date;
+delimiter //
+CREATE PROCEDURE Update_Batch_Import_Date
+(b_id CHAR(6), new_imp_date INT)
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+	DECLARE export_date DATE;
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+    
+	SELECT exp_date INTO export_date FROM M_BATCH WHERE ba_id = b_id;
+    
+	IF export_date < new_imp_date THEN
+		SET @error_msg = CONCAT('Ngay nhat lo hang phai nho hon ngay het han');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	UPDATE M_BATCH
+    SET imp_date = new_imp_date
+    WHERE ba_id = b_id;
+END 
+//
+
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Export_Date;
+delimiter //
+CREATE PROCEDURE Update_Batch_Export_Date
+(b_id CHAR(6), new_exp_date INT)
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+	DECLARE import_date DATE;
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+    
+	SELECT imp_date INTO import_date FROM M_BATCH WHERE ba_id = b_id;
+    
+	IF import_date > new_exp_date THEN
+		SET @error_msg = CONCAT('Ngay nhat lo hang phai nho hon ngay het han');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	UPDATE M_BATCH
+    SET exp_date = new_exp_date
+    WHERE ba_id = b_id;
+END 
+//
+
+
+delimiter ;
+DROP PROCEDURE IF EXISTS Update_Batch_Quantity;
+delimiter //
+CREATE PROCEDURE Update_Batch_Quantity
+(b_id CHAR(6), new_quantity INT)
+BEGIN
+	DECLARE b_count INT DEFAULT 0;
+
+	SELECT COUNT(*) INTO b_count FROM M_BATCH WHERE ba_id = b_id;
+    
+	-- lo hang khong ton tai
+    IF b_count = 0 THEN
+		SET @error_msg = CONCAT('Lo hang voi ID: ',CAST(b_id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	IF new_quantity <= 0 THEN
+		SET @error_msg = CONCAT('So luong cua lo hang phai duong');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	UPDATE M_BATCH
+    SET quantity = new_quantity
+    WHERE ba_id = b_id;
+END 
+//
+delimiter ;
+
+-- cus_phone
+DROP PROCEDURE IF EXISTS Update_Customer_Phone_Number;
+delimiter //
+CREATE PROCEDURE Update_Customer_Phone_Number
+(id CHAR(6), p_num CHAR(10))
+BEGIN
+	DECLARE c_count INT DEFAULT 0;
+    
+	SELECT COUNT(*) INTO c_count FROM CUSTOMER WHERE cus_id = id;
+    
+	-- khach hang khong ton tai
+    IF c_count = 0 THEN
+		SET @error_msg = CONCAT('Khach hang voi ID: ',CAST(id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+    IF LENGTH(p_num) != 10 THEN
+		SET @error_msg = CONCAT('So dien thoai phai gom chinh xac 10 chu so');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+    END IF;
+    
+	UPDATE CUSTOMER
+    SET phone_num = p_num
+    WHERE cus_id = id;
+END//
+delimiter ;
+
+-- cus_mail
+DROP PROCEDURE IF EXISTS Update_Customer_Email;
+delimiter //
+CREATE PROCEDURE Update_Customer_Email
+(id CHAR(6), mail VARCHAR(40))
+BEGIN
+	DECLARE c_count INT DEFAULT 0;
+    
+	SELECT COUNT(*) INTO c_count FROM CUSTOMER WHERE cus_id = id;
+    
+	-- khach hang khong ton tai
+    IF c_count = 0 THEN
+		SET @error_msg = CONCAT('Khach hang voi ID: ',CAST(id AS CHAR), ' khong ton tai');
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+	END IF;
+    
+	IF 
+    mail NOT REGEXP '^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9._-]@[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]\\.[a-zA-Z]{2,63}$'
+    THEN
+		SET @error_msg = 'Dia chi email khong hop le';
+		SIGNAL SQLSTATE '45000' SET 
+		MESSAGE_TEXT = @error_msg; 
+    END IF;
+    
+	UPDATE CUSTOMER
+    SET gmail = mail
+    WHERE cus_id = id;
+END//
+delimiter ;

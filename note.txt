@@ -1,2 +1,0 @@
-//Update Note
-Procedure.sql: Complete insert procedure of employee, product, promotion and related tables.

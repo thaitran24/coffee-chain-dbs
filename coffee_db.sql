@@ -128,7 +128,7 @@ CREATE TABLE M_BATCH (	# lo nguyen lieu
     CONSTRAINT 	fk_material_batch
 				FOREIGN KEY (m_id) 
 				REFERENCES MATERIAL(m_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
+				ON DELETE CASCADE ON UPDATE CASCADE,
 	CONSTRAINT 	fk_emp_import_batch
 				FOREIGN KEY (mng_id) 
 				REFERENCES EMPLOYEE(emp_id) 
@@ -199,7 +199,7 @@ CREATE TABLE PR_ORDER (	# don hang
     total		INT		NOT NULL	DEFAULT 0,
     order_type	BOOL 	NOT NULL,	# 0: offline, 1: online
     rec_address	VARCHAR(100)		DEFAULT '',		# noi nhan hang
-    promo_id	CHAR(6)					DEFAULT 0,
+    promo_id	CHAR(6)					DEFAULT 'PM0000',
     br_id		CHAR(6)	NOT NULL	DEFAULT 'BR0000',
     cus_id		CHAR(6)	NOT NULL,
     emp_id		CHAR(6)	NOT NULL	DEFAULT 'E00000',
@@ -207,7 +207,7 @@ CREATE TABLE PR_ORDER (	# don hang
 	CONSTRAINT 	fk_promotion_order
 				FOREIGN KEY (promo_id) 
 				REFERENCES PROMOTION(promo_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
+				ON DELETE SET DEFAULT ON UPDATE CASCADE,
 	CONSTRAINT 	fk_customer_order
 				FOREIGN KEY (cus_id) 
 				REFERENCES CUSTOMER(cus_id) 
@@ -230,7 +230,7 @@ CREATE TABLE RECEIPT (
     pay_time	TIME	NOT NULL,
     promo_red	INT, 	# khuyen mai quy doi
     br_id		CHAR(6)	NOT NULL	DEFAULT 'BR0000',
-    cus_id		CHAR(6)	NOT NULL,
+    cus_id		CHAR(6)	NOT NULL	DEFAULT 'C00000',
     total		INT		NOT NULL,
     CONSTRAINT 	fk_branch_receipt
 				FOREIGN KEY (br_id) 
@@ -239,7 +239,7 @@ CREATE TABLE RECEIPT (
 	CONSTRAINT 	fk_customer_receipt
 				FOREIGN KEY (cus_id) 
 				REFERENCES CUSTOMER(cus_id) 
-				ON DELETE RESTRICT ON UPDATE CASCADE,
+				ON DELETE SET DEFAULT ON UPDATE CASCADE,
 	CONSTRAINT 	fk_order_receipt
 				FOREIGN KEY (order_id) 
 				REFERENCES PR_ORDER(order_id) 
